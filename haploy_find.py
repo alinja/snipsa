@@ -13,15 +13,14 @@ elif len(sys.argv) < 3:
     haploy.load_db()
     print("DB loaded!")
     print("Loading chr data...")
-    snpset={}
     fname=sys.argv[1]
-    n_total = snpload.load(fname, snpset, ['Y'])
+    snpset, meta = snpload.load(fname, ['Y'])
     
     if 'Y' not in snpset:
         print("No Y data found")
         sys.exit()
         
-    print("%s: Total SNPs: %d"%(fname,n_total))
+    print("%s: Total SNPs: %d"%(fname,meta['total']))
 
     found_mutations=haploy.yfind(snpset)
     for m in found_mutations:
@@ -32,12 +31,7 @@ else:
     print("DB loaded!")
     lookfor = sys.argv[1].split(',')
     for fname in sys.argv[2:]:
-        snpset={}
-        try:
-            n_total = snpload.load(fname, snpset, ['Y'])
-        except:
-            print('%s: load failed'%fname)
-            continue
+        snpset, meta = snpload.load(fname, ['Y'])
         if 'Y' not in snpset:
             print('%s: no Y data'%fname)
             continue
