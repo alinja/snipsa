@@ -5,20 +5,26 @@ from bs4 import BeautifulSoup
 import urllib.request
 import re
 import copy
+import snpload
 
-def print_uptree(snpset, ut):
+def print_uptree(snpset, ut, do_print=True):
+    rep=''
     mt=snpset['MT'];
     pos=0
     neg=0
     tot=0
     for i, mut in enumerate(ut):
         if mut['p'] in mt:
-            print("%-3s%-12s %s %s"%(mut['tag'], mut['g'], mt[mut['p']]['gen'], mut['raw'])) 
+            rep += "%-3s%-12s %s %s\n"%(mut['tag'], mut['g'], mt[mut['p']]['gen'], mut['raw']) 
         else:
-            print("%-3s%-12s %s %s"%(mut['tag'], mut['g'], ' ', mut['raw'])) 
+            rep += "%-3s%-12s %s %s\n"%(mut['tag'], mut['g'], ' ', mut['raw'])
             pass
+    if do_print:
+        print(rep)
+    return rep
 
-def print_extras(snpset, bt):
+def print_extras(snpset, bt, do_print=True):
+    rep=''
     last=''
     out=[]
     outs=''
@@ -26,10 +32,51 @@ def print_extras(snpset, bt):
         out.append(e['raw'])
         outs += e['raw'] + ' '
         last=e['raw']
-    print('Extra: '+outs)
+    rep += 'Extra: '+outs+'\n'
+    if do_print:
+        print(rep)
+    return rep
+
+def print_all(snpset, bt, do_print=True):
+    rep=''
+    last=''
+    out=[]
+    outs=''
+    for e in bt['all']:
+        out.append(e['raw'])
+        outs += e['raw'] + ' '
+        last=e['raw']
+    rep += 'All: '+outs+'\n'
+    if do_print:
+        print(rep)
+    return rep
+
+def report(fname, n, do_uptree=True, do_extra=True, do_all=False, filt='', force=''):
+    rep=''
+    snpset, meta = snpload.load(fname, ['MT'])
+    if 'MT' not in snpset:
+        return "No MT data found\n"
+
+    rep += "%s: Total SNPs: %d\n"%(fname, meta['total'])
+
+    best_trees = mtfind(snpset, n, filt, force)
+
+    for bt in best_trees:
+        if do_all:
+            rep += print_all(snpset, bt, False)
+
+        if do_uptree:
+            rep += print_uptree(snpset, bt['ut'], False)
+
+        leaf_mut = bt['ut'][len(bt['ut'])-1]
+        rep += "Result (%-8s %5.1f%% -%d +%d): %-8s\n"%(leaf_mut['raw'], bt['score'], bt['neg'], len(bt['extras']), leaf_mut['g'])
+
+        if do_extra:
+            rep += print_extras(snpset, bt, False)
+    return rep
 
 #Create a list of mutations on a path upwards from a mutation 
-def mtfind_uptree(snpset, mut_leaf):
+def mtfind_uptree(snpset, find_g):
     found = 0
     uptree = []
     sames = []
@@ -42,7 +89,7 @@ def mtfind_uptree(snpset, mut_leaf):
                 sameg = mut['g']
                 sames = []
                 sames.append(mut)
-            if mut == mut_leaf:
+            if mut['g'] == find_g: #mut_leaf['g']: #TODO: g?
                 found = 1
                 depth = mut['l']
                 g = mut['g']
@@ -79,7 +126,7 @@ def mtmatch(snpset, mut):
         return False
 
 # Finds n best mtDNA matches by tracing all possible mutation paths in database 
-def mtfind(snpset, nbest=5):
+def mtfind(snpset, nbest=5, filt='', force=''):
     mt=snpset['MT'];
     all_mutations = []
     uptrees=[]
@@ -92,10 +139,16 @@ def mtfind(snpset, nbest=5):
         if pos in mt:
             if mt[pos]['gen'] == mut['t']:
                 #print(mt[pos], mut)
-                all_mutations.append(mut)
-                uptree = mtfind_uptree(snpset, mut)
+                if mut['!']==0:
+                    all_mutations.append(mut)
+                uptree = mtfind_uptree(snpset, mut['g'])
                 uptrees.append(uptree)
                 allmuts.append(mut)
+
+    #if there is a forced path set, find a path for it too
+    if force:
+        uptree = mtfind_uptree(snpset, force)
+        uptrees.append(uptree)
 
     #find the uptree route that is most consistent
     #random mutations can have many negative matches above them until the path reaches the common
@@ -170,6 +223,15 @@ def mtfind(snpset, nbest=5):
                 last = e['raw']
         extras = de_duplicate
         nextras = len(extras)
+
+        #extract unique all mutations
+        last = ''
+        de_duplicate=[]
+        for e in sorted(all_mutations, key=lambda x: int(re.compile(r'[^\d.]+').sub('', x['raw']))):
+            if last != e['raw'] and e['!'] == 0:
+                de_duplicate.append(e)
+                last = e['raw']
+        all_mutations = de_duplicate
         
         #calculate score giving penalty from negative matches, favoring longest matches
         score = 100.0*(pos - 2.0*neg + 0.00*tot - 0.0*nextras)/(tot + nextras)
@@ -185,6 +247,11 @@ def mtfind(snpset, nbest=5):
         }
         best_trees.append(bt)
     
+    if filt:
+        if filt[0] == '=':
+            best_trees = filter(lambda bt: filt[1:] == bt['ut'][-1]['g'], best_trees)
+        else:
+            best_trees = filter(lambda bt: filt in bt['ut'][-1]['g'], best_trees)
     best_trees=sorted(best_trees, key=lambda i: -i['score'])   
 
     return best_trees[:nbest]

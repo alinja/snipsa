@@ -3,7 +3,7 @@ import sys
 import os
 import haplomt
 
-phylotree=1
+phylotree=0
 
 if phylotree:
     print('Loading mutation DB from "mtDNA tree Build 17.htm"')

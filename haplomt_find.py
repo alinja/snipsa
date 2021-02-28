@@ -3,44 +3,50 @@ import sys
 import os
 import snpload
 import haplomt
+import argparse
 
 #configure how many candidates are shown:
 n_single = 1
 n_multi = 5
+force=''
+filt=''
+all=False
 
-if len(sys.argv) < 2:
+parser = argparse.ArgumentParser()
+parser.add_argument('-s', '--single', help='Analyse a path for single group')
+parser.add_argument('-a', '--all', action='store_true', help='Show listing of all found mutations')
+parser.add_argument('-n', '--num', help='Show num best matches')
+parser.add_argument('file', nargs='+')
+
+args = parser.parse_args()
+if args.single:
+    force = args.single
+    filt = '='+args.single
+if args.num:
+    n_single = int(args.num)
+    n_multi = int(args.num)
+if args.all:
+    all=True
+
+if len(args.file) < 1:
     print(sys.argv[0]+" <filename>")
     print(sys.argv[0]+" <filter> <filenames>..")
-elif len(sys.argv) < 3:
+elif len(args.file) < 2:
     print("Loading DB...")
     haplomt.load_db()
     print("DB loaded!")
     
     print("Loading chr data...")
-    fname=sys.argv[1]
-    snpset, meta = snpload.load(fname, ['MT'])
+    rep = haplomt.report(args.file[0], n_single, do_all=all, filt=filt, force=force)
+    print(rep)
     
-    if 'MT' not in snpset:
-        print("No MT data found")
-        sys.exit()
-        
-    print("%s: Total SNPs: %d"%(fname,meta['total']))
-
-    best_trees = haplomt.mtfind(snpset, n_single)
-    
-    for bt in best_trees:
-        haplomt.print_uptree(snpset, bt['ut'])
-        leaf_mut = bt['ut'][len(bt['ut'])-1]
-        print("Result (%-8s %5.1f%% -%d +%d): %-8s"%(leaf_mut['raw'], bt['score'], bt['neg'], len(bt['extras']), leaf_mut['g']))
-        haplomt.print_extras(snpset, bt)
-
 else:
     print("Loading DB...")
     haplomt.load_db()
     print("DB loaded!")
     
-    lookfor = sys.argv[1].split(',')
-    for fname in sys.argv[2:]:
+    lookfor = args.file[0].split(',')
+    for fname in args.file[1:]:
         #try:
         snpset, meta = snpload.load(fname, ['MT'])
         
@@ -48,7 +54,7 @@ else:
             print('%s: no MT data'%fname)
             continue
 
-        best_trees = haplomt.mtfind(snpset, n_multi)
+        best_trees = haplomt.mtfind(snpset, n_multi, filt, force)
         
         found=0
         for bt in best_trees:
