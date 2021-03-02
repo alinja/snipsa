@@ -14,10 +14,13 @@ def print_uptree(snpset, ut, do_print=True):
     neg=0
     tot=0
     for i, mut in enumerate(ut):
+        txt=''
+        if 'txt' in mut:
+            txt=mut['txt']
         if mut['p'] in mt:
-            rep += "%-3s%-12s %s %s\n"%(mut['tag'], mut['g'], mt[mut['p']]['gen'], mut['raw']) 
+            rep += "%-3s%-12s %s %-8s %s\n"%(mut['tag'], mut['g'], mt[mut['p']]['gen'], mut['raw'], txt) 
         else:
-            rep += "%-3s%-12s %s %s\n"%(mut['tag'], mut['g'], ' ', mut['raw'])
+            rep += "%-3s%-12s %s %-8s %s\n"%(mut['tag'], mut['g'], ' ', mut['raw'], txt)
             pass
     if do_print:
         print(rep)
@@ -51,11 +54,23 @@ def print_all(snpset, bt, do_print=True):
         print(rep)
     return rep
 
+def print_data(do_print=True):
+    rep=''
+
+    rep += 'Based on data from yfull.com on 2020-02-28 (CC-BY) and phylotree.org\n'
+
+    if do_print:
+        print(rep)
+    return rep
+
+
 def report(fname, n, do_uptree=True, do_extra=True, do_all=False, filt='', force=''):
     rep=''
     snpset, meta = snpload.load(fname, ['MT'])
     if 'MT' not in snpset:
         return "No MT data found\n"
+
+    rep += print_data(False)
 
     rep += "%s: Total SNPs: %d\n"%(fname, meta['total'])
 
@@ -372,6 +387,13 @@ def yfull_parse_muts(li):
             o.append(m.strip())
     return o
 
+def yfull_parse_age(li):
+    s=''
+    agespan=li.find('span', class_='yf-age', recursive=False)
+    if agespan:
+        s+=agespan.text
+    return s
+
 def yfull_recurse_list(ul_in, level, fileroot):
     lis = ul_in.find_all('li', recursive=False)
     for li in lis:
@@ -382,6 +404,7 @@ def yfull_recurse_list(ul_in, level, fileroot):
             muts['g']=g.text
             muts['link']=g['href']
         mlist = yfull_parse_muts(li)
+        age = yfull_parse_age(li)
         
         if 'g' in muts and not muts['g'].endswith('*') and not fileroot:
             for m in mlist:
@@ -393,6 +416,8 @@ def yfull_recurse_list(ul_in, level, fileroot):
                 mutse['p']=dec['p']
                 mutse['!']=dec['!']
                 mutse['raw']=m
+                if age:
+                    mutse['txt']=age
                 #print(mutse)
                 haplo_muts_list.append(mutse)
             #print(muts)
