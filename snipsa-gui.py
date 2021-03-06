@@ -5,6 +5,7 @@ import tkinter as tk
 import tkinter.filedialog
 from tkinter import scrolledtext 
 import haplomt
+import haploy
 
 #
 # Win  install:
@@ -19,7 +20,14 @@ def handle_file_select():
     fname = tkinter.filedialog.askopenfile().name
     fnamevar.set(fname)
 
+dbmt_loaded = 0
+dby_loaded = 0
+
 def handle_findmt():
+    global dbmt_loaded
+    if not dbmt_loaded:
+        dbmt_loaded = 1
+        haplomt.load_db()
     do_uptree = report_snps.get()
     do_all = report_all.get()
     force = pathvar.get()
@@ -34,13 +42,28 @@ def handle_findmt():
     scr.config(state=tk.DISABLED)
     scr.see("end")
    
-print("Loading DB...")
-haplomt.load_db()
-print("DB loaded!")
+def handle_findy():
+    global dby_loaded
+    if not dby_loaded:
+        dby_loaded = 1
+        haploy.load_db2()
+    do_uptree = report_snps.get()
+    do_all = report_all.get()
+    force = pathvar.get()
+    fname = fnamevar.get()
+    print("Reporting file: "+fname)
+    num = int(numbox.get())
+    rep = haploy.report(fname, num, do_uptree=do_uptree, do_extra=do_uptree, do_all=do_all, filt=force, force=force)
+    print("Done")
+    scr.config(state=tk.NORMAL)
+    scr.delete('1.0', tk.END)
+    scr.insert('1.0', rep)
+    scr.config(state=tk.DISABLED)
+    scr.see("end")
 
 window = tk.Tk()
 window.title("Snipsa GUI")
-window.geometry("600x700")
+window.geometry("900x700")
 window.minsize(600, 300)
 
 hdrframe=tk.Frame(window)
@@ -83,7 +106,9 @@ pathbox.pack(side=tk.LEFT)
 cframe=tk.Frame(hdrframe)
 cframe.pack()
 cbutton1 = tk.Button(cframe, text="Find MT", command=handle_findmt)
-cbutton1.pack(fill='x', expand=True)
+cbutton1.pack(side=tk.LEFT, fill='x', expand=True)
+cbutton2 = tk.Button(cframe, text="Find Y", command=handle_findy)
+cbutton2.pack(side=tk.LEFT, fill='x', expand=True)
 
 # Result area
 scr=scrolledtext.ScrolledText(window, wrap=tk.WORD)  
