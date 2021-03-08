@@ -7,15 +7,6 @@ from tkinter import scrolledtext
 import haplomt
 import haploy
 
-#
-# Win  install:
-# https://www.kannon.link/free/2019/06/24/distribution-using-a-python-embeddable-zip-file/
-#  - python.exe get-pip.py
-#  - python37._pth
-#  - python.exe -m pip install bs4
-#  - tkinter
-#
-
 def handle_file_select():
     fname = tkinter.filedialog.askopenfile().name
     fnamevar.set(fname)

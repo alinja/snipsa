@@ -2,6 +2,12 @@
 
 A small project experimenting with SNP genome data and python.
 
+## snipsa-gui.py
+
+Windows: unzip the windows release package and start snipsa.bat in the main folder. The zip includes python, all dependencies and SNP databases.
+
+Linux: install dependencies and run snipsa-gui.py.
+
 ## haploy_find.py
 
 This small tool reads a raw SNP data file and lists Y chromosome haplogroup information. You must first initialize the mutation
