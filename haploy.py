@@ -62,7 +62,7 @@ def print_all(snpset, bt, do_print=True):
 def print_data(do_print=True):
     rep=''
 
-    rep += 'Based on data from yfull.com on 2020-03-06 (CC-BY) and https://isogg.org/tree/ Y-DNA Tree 2019-2020\n'
+    rep += 'Based on data from yfull.com on 2020-03-06 (CC-BY) and isogg.org/tree Y-DNA Tree 2019-2020 and ybrowse.org (CC BY-NC-SA)\n'
 
     if do_print:
         print(rep)
@@ -466,6 +466,51 @@ def load_yfull_snp(pages):
 
     print("Lines in YFull mut DB: ", len(haplo_yfull_muts_by_name))
 
+haplo_ybrowse_muts_by_name = {}
+haplo_ybrowse_muts_by_b38 = {}
+
+# Source: http://www.ybrowse.org/gbrowse2/gff/
+def load_ybrowse_snp():
+    ln=0;
+    with open('snps_hg38.gff3') as f:
+        for line in f:
+            ln+=1
+            if ln % 100000 == 0:
+                print('Line: %d...'%ln)
+            if len(line) < 2:
+                continue
+            if line[0] == '#':
+                continue
+            tlv=line.split('\t')
+            if len(tlv) < 8:
+                print('TODO:', tlv)
+                continue
+            #print(tlv)
+            if tlv[0] != 'chrY' or  tlv[2] != 'snp' or (tlv[1] != 'point' and tlv[1] != 'indel'):
+                if tlv[1] != 'primate':
+                    print(tlv)
+                continue
+            #TODO quality based filtering
+            b38 = tlv[3]
+            f=tlv[8].split(';')
+            mname=f[0].split('=')[1]
+            der=f[3].split('=')[1]
+            der=der[0].upper()
+            isog=f[7].split('=')[1]
+            #print(b38, mname, der)
+            mut = {
+                'm': mname,
+                'mall': '?',
+                'g': isog,
+                'rs': '?',
+                'b38': b38,
+                'p': der,
+            }
+            if mname not in haplo_ybrowse_muts_by_name:
+                haplo_ybrowse_muts_by_name[mname] = mut
+            if b38 not in haplo_ybrowse_muts_by_b38:
+                haplo_ybrowse_muts_by_b38[b38] = mut
+    print("Lines in YBrowse snp DB: ", len(haplo_ybrowse_muts_by_name))
 
 # Convert formats with CrossMap and chain file in crossmap/
 # http://crossmap.sourceforge.net/
@@ -473,18 +518,21 @@ def load_yfull_snp(pages):
 def convert_build38to36():
     haplo_mut = haplo_muts_by_b38
     haplo_mut2 = haplo_yfull_muts_by_name
+    haplo_mut3 = haplo_ybrowse_muts_by_name
     with open('crossmap/conv_in.bed', 'w') as f:
         for mut in haplo_mut:
             f.write("chrY %d %d\n"%(int(haplo_mut[mut]['b38']), int(haplo_mut[mut]['b38'])+1))
         for mut in haplo_mut2:
             f.write("chrY %d %d\n"%(int(haplo_mut2[mut]['b38']), int(haplo_mut2[mut]['b38'])+1))
+        for mut in haplo_mut3:
+            f.write("chrY %d %d\n"%(int(haplo_mut3[mut]['b38']), int(haplo_mut3[mut]['b38'])+1))
     os.system("cd crossmap; CrossMap.py bed GRCh38_to_NCBI36.chain.gz conv_in.bed > conv_out.bed")
     i=0
     with open('crossmap/conv_out.bed', 'r') as f:
         for line in f:
             con=line.split('->')
             if len(con) < 2:
-                print('TODO:', line)
+                #print('TODO:', line)
                 continue
             b36 = con[1].split()[1]
             b38 = con[0].split()[1]
@@ -495,6 +543,43 @@ def convert_build38to36():
             if b38 in haplo_yfull_muts_by_b38:
                 #print("Conv Yfull %s to %s"%(b38, b36)
                 haplo_yfull_muts_by_b38[b38]['b36'] = b36
+            if b38 in haplo_ybrowse_muts_by_b38:
+                #print("Conv YBrowse %s to %s"%(b38, b36)
+                haplo_ybrowse_muts_by_b38[b38]['b36'] = b36
+            i+=1
+    os.system("cd crossmap; rm conv_in.bed conv_out.bed")
+
+def convert_build38to37():
+    haplo_mut = haplo_muts_by_b38
+    haplo_mut2 = haplo_yfull_muts_by_name
+    haplo_mut3 = haplo_ybrowse_muts_by_name
+    with open('crossmap/conv_in.bed', 'w') as f:
+        for mut in haplo_mut:
+            f.write("chrY %d %d\n"%(int(haplo_mut[mut]['b38']), int(haplo_mut[mut]['b38'])+1))
+        for mut in haplo_mut2:
+            f.write("chrY %d %d\n"%(int(haplo_mut2[mut]['b38']), int(haplo_mut2[mut]['b38'])+1))
+        for mut in haplo_mut3:
+            f.write("chrY %d %d\n"%(int(haplo_mut3[mut]['b38']), int(haplo_mut3[mut]['b38'])+1))
+    os.system("cd crossmap; CrossMap.py bed GRCh38_to_GRCh37.chain.gz conv_in.bed > conv_out.bed")
+    i=0
+    with open('crossmap/conv_out.bed', 'r') as f:
+        for line in f:
+            con=line.split('->')
+            if len(con) < 2:
+                #print('TODO:', line)
+                continue
+            b37 = con[1].split()[1]
+            b38 = con[0].split()[1]
+            if b38 in haplo_muts_by_b38:
+                #print("Conv %s to %s"%(b38, b37)
+                haplo_muts_by_b37[b37] = haplo_muts_by_b38[b38]
+                haplo_muts_by_b37[b37]['b37'] = b37
+            if b38 in haplo_yfull_muts_by_b38:
+                #print("Conv Yfull %s to %s"%(b38, b37)
+                haplo_yfull_muts_by_b38[b38]['b37'] = b37
+            if b38 in haplo_ybrowse_muts_by_b38:
+                #print("Conv YBrowse %s to %s"%(b38, b37)
+                haplo_ybrowse_muts_by_b38[b38]['b37'] = b37
             i+=1
     os.system("cd crossmap; rm conv_in.bed conv_out.bed")
     
@@ -521,6 +606,11 @@ def save_yfull_db():
         for mut in haplo_yfull_muts_by_name:
             print(haplo_yfull_muts_by_name[mut], file = f)
 
+def save_ybrowse_db():
+    with open('ybrowse_snp.txt', 'w') as f:
+        for mut in haplo_ybrowse_muts_by_name:
+            print(haplo_ybrowse_muts_by_name[mut], file = f)
+
 def save_db2():
     with open('haploy_map2.txt', 'w') as f:
         for mut in haplo_muts_list:
@@ -539,31 +629,53 @@ def show_db2():
 
 def decode_entry(e):
     global haplo_muts_by_name
-    m={}
+    e2=[]
     for e1 in e.split('/'):
-        if e1 in haplo_yfull_muts_by_name:
-            mut = haplo_yfull_muts_by_name[e1]
+        e2.append(e1.replace('(H)',''))
+    m={}
+    for e1 in e2:
+        if e1 in haplo_ybrowse_muts_by_name:
+            mut = haplo_ybrowse_muts_by_name[e1]
             m['f']=''
             if not 'isogg' in m:
-                m['isog']='n/a'
+                m['isog']=''
+            #m['isog']+=mut['g']+'(YB)'
             m['t']=mut['p']
             m['b38']=mut['b38']
-            m['b37']=mut['b37']
+            if 'b37' in mut:
+                m['b37']=mut['b37']
             if 'b36' in mut:
                 m['b36']=mut['b36']
             else:
                 continue
             break
-    for e1 in e.split('/'):
-        if e1 in haplo_muts_by_name:
-            mut = haplo_muts_by_name[e1]
+    for e1 in e2:
+        if e1 in haplo_yfull_muts_by_name:
+            mut = haplo_yfull_muts_by_name[e1]
             m['f']=''
             if not 'isogg' in m:
                 m['isog']=''
-            m['isog']+=mut['g']
             m['t']=mut['p']
             m['b38']=mut['b38']
-            m['b37']=mut['b37']
+            if 'b37' in mut:
+                m['b37']=mut['b37']
+            if 'b36' in mut:
+                m['b36']=mut['b36']
+            else:
+                continue
+            break
+    for e1 in e2:
+        if e1 in haplo_muts_by_name:
+            mut = haplo_muts_by_name[e1]
+            m['f']=''
+            #if not 'isogg' in m:
+            #    m['isog']=''
+            m['isog']=''
+            m['isog']+=mut['g']+''
+            m['t']=mut['p']
+            m['b38']=mut['b38']
+            if 'b37' in mut:
+                m['b37']=mut['b37']
             if 'b36' in mut:
                 m['b36']=mut['b36']
             else:
@@ -651,7 +763,7 @@ def yfull_recurse_list(ul_in, level, fileroot):
                 dec = decode_entry(m)
                 mutse['raw']=m
                 if not dec:
-                    #print('No pos found for', m)
+                    print('No pos found for', m)
                     global no_pos_counter
                     no_pos_counter+=1
                 #    dec['isog']='n/a'
@@ -660,13 +772,14 @@ def yfull_recurse_list(ul_in, level, fileroot):
                 #    dec['b37']='0'
                 #    dec['b36']='0'
                     continue
-                if not dec['b37']: #TODO
+                if not 'b37' in dec or not dec['b37']:
                     print('TODO b37:', mutse, dec)
                     dec['b37'] = '0'
-                if not dec['b38']: #TODO
+                    continue #TODO: include also build38-only snps
+                if not 'b38' in dec or not dec['b38']:
                     print('TODO b38:', mutse, dec)
                     dec['b38'] = '0'
-                if not 'b36' in dec:
+                if not 'b36' in dec or not 'b36' in dec:
                     print('TODO b36:', mutse, dec)
                     dec['b36'] = '0'
                 #muts['f']=dec['f']
@@ -718,6 +831,7 @@ def import_yfull_tree():
     yfull_recurse_file('A00', 0)
     yfull_recurse_file('A0-T', 0)
     print('No pos found for %d tree nodes'%no_pos_counter)
+    print('Tree database size is %d nodes'%len(haplo_muts_list))
 
 
 

@@ -3,10 +3,13 @@ import sys
 import os
 import haploy
 
-do_yfull_snps=1
+do_yfull_snps=0
 
 print("Loading SNP DB from ISOGG csv...")
 haploy.load_snp()
+
+print("Loading SNP DB from YBrowse...")
+haploy.load_ybrowse_snp()
 
 if do_yfull_snps:
     print("Loading SNP DB from YFull...")
@@ -14,6 +17,10 @@ if do_yfull_snps:
 
 print("Running conversion to support build 36 matching...")
 haploy.convert_build38to36()
+
+print("Running conversion to support build 37 matching...")
+haploy.convert_build38to37()
+#haploy.save_ybrowse_db()
 
 print("Importing tree DB from YFull...")
 haploy.import_yfull_tree()
