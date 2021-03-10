@@ -17,9 +17,9 @@ def print_uptree(snpset, ut, do_print=True, b3x='b37'):
         if 'txt' in mut:
             txt=mut['txt']
         if mut[b3x] in y:
-            rep += "%-1s%-8s %s %-19s %-38s %s\n"%(mut['tag'], mut['g'], y[mut[b3x]]['gen'], mut['isog'], mut['raw'], txt) 
+            rep += "%-1s%-9s%s %-22s %-38s %s\n"%(mut['tag'], mut['g'], y[mut[b3x]]['gen'], mut['isog'], mut['raw'], txt) 
         else:
-            rep += "%-1s%-8s %s %-19s %-38s %s\n"%(mut['tag'], mut['g'], ' ', mut['isog'], mut['raw'], txt)
+            rep += "%-1s%-9s%s %-22s %-38s %s\n"%(mut['tag'], mut['g'], ' ', mut['isog'], mut['raw'], txt)
             pass
     if do_print:
         print(rep)
@@ -410,14 +410,74 @@ def load_snp():
             pnum+=1
     print("Lines in mut DB: %d (%d)"%(lnum, pnum))
 
+haplo_yfull_muts_by_name = {}
+haplo_yfull_muts_by_b38 = {}
+
+#Imports database from YFull /snp-list/ URL
+def load_yfull_snp_file(fname):
+    pnum = 0
+    with open(fname) as f:
+        print('Importing file: ' +fname)
+        soup = BeautifulSoup(f.read(), features="html.parser")
+        d = soup.find('div', id='t1')
+        t = d.find('table')
+        rows = t.find_all('tr')
+        for row in rows:
+            pnum+=1
+            if pnum == 1:
+                continue
+            cells = row.find_all('td')
+            mname=cells[0].text
+            b38=cells[3].text
+            if b38 == '':
+                continue
+            mut = {
+                'm': mname,
+                'mall': '?',
+                'g': '?',
+                'rs': '?',
+                'b37': cells[2].text,
+                'b38': b38,
+                'p': cells[5].text,
+            }
+            if mname not in haplo_yfull_muts_by_name:
+                haplo_yfull_muts_by_name[mname] = mut
+            if b38 not in haplo_yfull_muts_by_b38:
+                haplo_yfull_muts_by_b38[b38] = mut
+
+def load_yfull_snp(pages):
+    try:
+        os.mkdir('yfull')
+    except OSError:
+        pass
+
+    for page in range(1, pages):
+        fname='yfull/yfull-snp-'+str(page)+'.html'
+        url='https://www.yfull.com/snp-list/?page='+str(page)
+        try:
+            with open(fname) as f:
+                pass
+        except OSError:
+            print('File not found: ' +fname)
+            print('Downloading ' + url + 'to file: ' + fname)
+            urllib.request.urlretrieve(url, fname);
+
+        load_yfull_snp_file(fname)
+
+    print("Lines in YFull mut DB: ", len(haplo_yfull_muts_by_name))
+
+
 # Convert formats with CrossMap and chain file in crossmap/
 # http://crossmap.sourceforge.net/
 # ftp://ftp.ensembl.org/pub/assembly_mapping/homo_sapiens/
 def convert_build38to36():
     haplo_mut = haplo_muts_by_b38
+    haplo_mut2 = haplo_yfull_muts_by_name
     with open('crossmap/conv_in.bed', 'w') as f:
         for mut in haplo_mut:
             f.write("chrY %d %d\n"%(int(haplo_mut[mut]['b38']), int(haplo_mut[mut]['b38'])+1))
+        for mut in haplo_mut2:
+            f.write("chrY %d %d\n"%(int(haplo_mut2[mut]['b38']), int(haplo_mut2[mut]['b38'])+1))
     os.system("cd crossmap; CrossMap.py bed GRCh38_to_NCBI36.chain.gz conv_in.bed > conv_out.bed")
     i=0
     with open('crossmap/conv_out.bed', 'r') as f:
@@ -427,9 +487,14 @@ def convert_build38to36():
                 print('TODO:', line)
                 continue
             b36 = con[1].split()[1]
-            #print("Conv %s to %s"%(con[0].split()[1], con[1].split()[1]))
-            haplo_muts_by_b36[b36] = haplo_muts_by_b38[con[0].split()[1]]
-            haplo_muts_by_b36[b36]['b36'] = b36
+            b38 = con[0].split()[1]
+            if b38 in haplo_muts_by_b38:
+                #print("Conv %s to %s"%(b38, b36)
+                haplo_muts_by_b36[b36] = haplo_muts_by_b38[b38]
+                haplo_muts_by_b36[b36]['b36'] = b36
+            if b38 in haplo_yfull_muts_by_b38:
+                #print("Conv Yfull %s to %s"%(b38, b36)
+                haplo_yfull_muts_by_b38[b38]['b36'] = b36
             i+=1
     os.system("cd crossmap; rm conv_in.bed conv_out.bed")
     
@@ -451,6 +516,11 @@ def load_db():
             haplo_muts_by_b37[mut['b37']] = mut 
             haplo_muts_by_b38[mut['b38']] = mut 
 
+def save_yfull_db():
+    with open('yfull_snp.txt', 'w') as f:
+        for mut in haplo_yfull_muts_by_name:
+            print(haplo_yfull_muts_by_name[mut], file = f)
+
 def save_db2():
     with open('haploy_map2.txt', 'w') as f:
         for mut in haplo_muts_list:
@@ -470,11 +540,22 @@ def show_db2():
 def decode_entry(e):
     global haplo_muts_by_name
     m={}
-    #print('decode_entry: ', e)
     for e1 in e.split('/'):
-        #print(e1)
+        if e1 in haplo_yfull_muts_by_name:
+            mut = haplo_yfull_muts_by_name[e1]
+            m['f']=''
+            if not 'isogg' in m:
+                m['isog']='n/a'
+            m['t']=mut['p']
+            m['b38']=mut['b38']
+            m['b37']=mut['b37']
+            if 'b36' in mut:
+                m['b36']=mut['b36']
+            else:
+                continue
+            break
+    for e1 in e.split('/'):
         if e1 in haplo_muts_by_name:
-            #print(haplo_muts_by_name[e1])
             mut = haplo_muts_by_name[e1]
             m['f']=''
             if not 'isogg' in m:
@@ -534,13 +615,22 @@ def yfull_parse_age(li):
         s+=agespan.text
     return s
 
+def yfull_is_tree_quirk(group_name):
+    if group_name=='R-P312':
+        return True
+    if group_name=='R-Z2118':
+        return True
+    return False
+
 def yfull_recurse_list(ul_in, level, fileroot):
     lis = ul_in.find_all('li', recursive=False)
     for li in lis:
         muts={}
         muts['l']=level
         g=li.find('a', recursive=False)
+        group_name=''
         if g:
+            group_name=g.text
             muts['g']=g.text
         l=li.find('a', href=True, recursive=False)
         if l:
@@ -561,12 +651,20 @@ def yfull_recurse_list(ul_in, level, fileroot):
                 dec = decode_entry(m)
                 mutse['raw']=m
                 if not dec:
+                    #print('No pos found for', m)
+                    global no_pos_counter
+                    no_pos_counter+=1
+                #    dec['isog']='n/a'
+                #    dec['t']='?'
+                #    dec['b38']='0'
+                #    dec['b37']='0'
+                #    dec['b36']='0'
                     continue
                 if not dec['b37']: #TODO
                     print('TODO b37:', mutse, dec)
                     dec['b37'] = '0'
                 if not dec['b38']: #TODO
-                    print('TODO b37:', mutse, dec)
+                    print('TODO b38:', mutse, dec)
                     dec['b38'] = '0'
                 if not 'b36' in dec:
                     print('TODO b36:', mutse, dec)
@@ -584,7 +682,7 @@ def yfull_recurse_list(ul_in, level, fileroot):
                 haplo_muts_list.append(mutse)
 
         ul = li.find('ul', recursive=False)
-        if ul:
+        if ul and not yfull_is_tree_quirk(group_name):
             #print('->')
             yfull_recurse_list(ul, level+1, None)
             #print('<-')
@@ -613,11 +711,13 @@ def yfull_recurse_file(group, level):
         ul = soup.find('ul', id='tree')
         yfull_recurse_list(ul, level, None)
 
-def import_yfull_snp():
+no_pos_counter=0
+def import_yfull_tree():
     #TODO complex muts
     #yfull_recurse_file('', 0)       #cannot use top level: muts missing
     yfull_recurse_file('A00', 0)
     yfull_recurse_file('A0-T', 0)
+    print('No pos found for %d tree nodes'%no_pos_counter)
 
 
 
