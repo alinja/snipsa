@@ -408,7 +408,7 @@ def load_snp():
             if b37 not in haplo_muts_by_b37:
                 haplo_muts_by_b37[b37] = mut
             pnum+=1
-    print("Lines in mut DB: %d (%d)"%(lnum, pnum))
+    print("Lines in ISOGG mut DB: %d (%d)"%(lnum, pnum))
 
 haplo_yfull_muts_by_name = {}
 haplo_yfull_muts_by_b38 = {}
@@ -496,7 +496,7 @@ def load_ybrowse_snp():
             mname=f[0].split('=')[1]
             der=f[3].split('=')[1]
             der=der[0].upper()
-            isog=f[7].split('=')[1]
+            isog='' #f[7].split('=')[1]
             #print(b38, mname, der)
             mut = {
                 'm': mname,
@@ -515,17 +515,20 @@ def load_ybrowse_snp():
 # Convert formats with CrossMap and chain file in crossmap/
 # http://crossmap.sourceforge.net/
 # ftp://ftp.ensembl.org/pub/assembly_mapping/homo_sapiens/
-def convert_build38to36():
-    haplo_mut = haplo_muts_by_b38
+def convert_build38_mkinput():
+    haplo_mut = haplo_muts_by_name
     haplo_mut2 = haplo_yfull_muts_by_name
     haplo_mut3 = haplo_ybrowse_muts_by_name
     with open('crossmap/conv_in.bed', 'w') as f:
         for mut in haplo_mut:
-            f.write("chrY %d %d\n"%(int(haplo_mut[mut]['b38']), int(haplo_mut[mut]['b38'])+1))
+            f.write("chrY %d %d %s\n"%(int(haplo_mut[mut]['b38']), int(haplo_mut[mut]['b38']), haplo_mut[mut]['m']))
         for mut in haplo_mut2:
-            f.write("chrY %d %d\n"%(int(haplo_mut2[mut]['b38']), int(haplo_mut2[mut]['b38'])+1))
+            f.write("chrY %d %d %s\n"%(int(haplo_mut2[mut]['b38']), int(haplo_mut2[mut]['b38']), haplo_mut2[mut]['m']))
         for mut in haplo_mut3:
-            f.write("chrY %d %d\n"%(int(haplo_mut3[mut]['b38']), int(haplo_mut3[mut]['b38'])+1))
+            f.write("chrY %d %d %s\n"%(int(haplo_mut3[mut]['b38']), int(haplo_mut3[mut]['b38']), haplo_mut3[mut]['m']))
+
+def convert_build38to36():
+    convert_build38_mkinput()
     os.system("cd crossmap; CrossMap.py bed GRCh38_to_NCBI36.chain.gz conv_in.bed > conv_out.bed")
     i=0
     with open('crossmap/conv_out.bed', 'r') as f:
@@ -536,30 +539,20 @@ def convert_build38to36():
                 continue
             b36 = con[1].split()[1]
             b38 = con[0].split()[1]
-            if b38 in haplo_muts_by_b38:
-                #print("Conv %s to %s"%(b38, b36)
-                haplo_muts_by_b36[b36] = haplo_muts_by_b38[b38]
-                haplo_muts_by_b36[b36]['b36'] = b36
-            if b38 in haplo_yfull_muts_by_b38:
-                #print("Conv Yfull %s to %s"%(b38, b36)
-                haplo_yfull_muts_by_b38[b38]['b36'] = b36
-            if b38 in haplo_ybrowse_muts_by_b38:
-                #print("Conv YBrowse %s to %s"%(b38, b36)
-                haplo_ybrowse_muts_by_b38[b38]['b36'] = b36
+            mname=''
+            if len(con[0].split()) > 3:
+                mname = con[0].split()[3]
+            if mname in haplo_muts_by_name:
+                haplo_muts_by_name[mname]['b36'] = b36
+            if mname in haplo_yfull_muts_by_name:
+                haplo_yfull_muts_by_name[mname]['b36'] = b36
+            if mname in haplo_ybrowse_muts_by_name:
+                haplo_ybrowse_muts_by_name[mname]['b36'] = b36
             i+=1
     os.system("cd crossmap; rm conv_in.bed conv_out.bed")
 
 def convert_build38to37():
-    haplo_mut = haplo_muts_by_b38
-    haplo_mut2 = haplo_yfull_muts_by_name
-    haplo_mut3 = haplo_ybrowse_muts_by_name
-    with open('crossmap/conv_in.bed', 'w') as f:
-        for mut in haplo_mut:
-            f.write("chrY %d %d\n"%(int(haplo_mut[mut]['b38']), int(haplo_mut[mut]['b38'])+1))
-        for mut in haplo_mut2:
-            f.write("chrY %d %d\n"%(int(haplo_mut2[mut]['b38']), int(haplo_mut2[mut]['b38'])+1))
-        for mut in haplo_mut3:
-            f.write("chrY %d %d\n"%(int(haplo_mut3[mut]['b38']), int(haplo_mut3[mut]['b38'])+1))
+    convert_build38_mkinput()
     os.system("cd crossmap; CrossMap.py bed GRCh38_to_GRCh37.chain.gz conv_in.bed > conv_out.bed")
     i=0
     with open('crossmap/conv_out.bed', 'r') as f:
@@ -570,16 +563,15 @@ def convert_build38to37():
                 continue
             b37 = con[1].split()[1]
             b38 = con[0].split()[1]
-            if b38 in haplo_muts_by_b38:
-                #print("Conv %s to %s"%(b38, b37)
-                haplo_muts_by_b37[b37] = haplo_muts_by_b38[b38]
-                haplo_muts_by_b37[b37]['b37'] = b37
-            if b38 in haplo_yfull_muts_by_b38:
-                #print("Conv Yfull %s to %s"%(b38, b37)
-                haplo_yfull_muts_by_b38[b38]['b37'] = b37
-            if b38 in haplo_ybrowse_muts_by_b38:
-                #print("Conv YBrowse %s to %s"%(b38, b37)
-                haplo_ybrowse_muts_by_b38[b38]['b37'] = b37
+            mname=''
+            if len(con[0].split()) > 3:
+                mname = con[0].split()[3]
+            if mname in haplo_muts_by_name:
+                haplo_muts_by_name[mname]['b37'] = b37
+            if mname in haplo_yfull_muts_by_name:
+                haplo_yfull_muts_by_name[mname]['b37'] = b37
+            if mname in haplo_ybrowse_muts_by_name:
+                haplo_ybrowse_muts_by_name[mname]['b37'] = b37
             i+=1
     os.system("cd crossmap; rm conv_in.bed conv_out.bed")
     
@@ -588,8 +580,8 @@ def save_db():
     #pickle.dump( haplo_muts_by_b36, open( "haploy_map.txt", "wb" ) )
     
     with open('haploy_map.txt', 'w') as f:
-        for mut in haplo_muts_by_b36:
-            print(haplo_muts_by_b36[mut], file = f)
+        for mut in haplo_muts_by_name:
+            print(haplo_muts_by_name[mut], file = f)
 
 def load_db():
     #haplo_muts_by_b36 = pickle.load( open( "haploy_map.txt", "rb" ) )
@@ -646,8 +638,6 @@ def decode_entry(e):
                 m['b37']=mut['b37']
             if 'b36' in mut:
                 m['b36']=mut['b36']
-            else:
-                continue
             break
     for e1 in e2:
         if e1 in haplo_yfull_muts_by_name:
@@ -661,8 +651,6 @@ def decode_entry(e):
                 m['b37']=mut['b37']
             if 'b36' in mut:
                 m['b36']=mut['b36']
-            else:
-                continue
             break
     for e1 in e2:
         if e1 in haplo_muts_by_name:
@@ -678,8 +666,6 @@ def decode_entry(e):
                 m['b37']=mut['b37']
             if 'b36' in mut:
                 m['b36']=mut['b36']
-            else:
-                continue
             break
     return m
 
@@ -727,7 +713,9 @@ def yfull_parse_age(li):
         s+=agespan.text
     return s
 
-def yfull_is_tree_quirk(group_name):
+def yfull_is_tree_quirk(group_name, fileroot):
+    if fileroot:
+        return False
     if group_name=='R-P312':
         return True
     if group_name=='R-Z2118':
@@ -795,9 +783,9 @@ def yfull_recurse_list(ul_in, level, fileroot):
                 haplo_muts_list.append(mutse)
 
         ul = li.find('ul', recursive=False)
-        if ul and not yfull_is_tree_quirk(group_name):
+        if ul and not yfull_is_tree_quirk(group_name, fileroot):
             #print('->')
-            yfull_recurse_list(ul, level+1, None)
+            yfull_recurse_list(ul, level+1, False)
             #print('<-')
         else:
             if 'g' in muts and muts['g'].endswith('*'):
@@ -822,7 +810,7 @@ def yfull_recurse_file(group, level):
         print('Importing file: ' +fname)
         soup = BeautifulSoup(f.read(), features="html.parser")
         ul = soup.find('ul', id='tree')
-        yfull_recurse_list(ul, level, None)
+        yfull_recurse_list(ul, level, True)
 
 no_pos_counter=0
 def import_yfull_tree():
