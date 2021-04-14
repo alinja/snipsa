@@ -31,6 +31,8 @@ def load(fname, crs=[]):
         importer = import_line_ftdna
     elif fmt == 'myheritage':
         importer = import_line_ftdna #same
+    elif fmt == 'vcf':
+        importer = import_line_vcf
     else:
         print("Undetected format: build%d, %s"%(build, fmt))
         meta['total'] = 0
@@ -75,7 +77,7 @@ def load(fname, crs=[]):
 
     if build != 36 and build != 37 and build != 38:
         print("BUILD NOT SUPPPORTED!!!!! = %d"%build)
-        
+        quit()
     meta['total'] = n_total
     return (snpset, meta)
 
@@ -155,6 +157,40 @@ def import_line_ftdna(line, build):
     gen = sline[3].strip().strip('"');
         
     snp = {'id': sline[0].strip('"'),
+        'cr': cr,
+        'gen': gen }
+
+    if build == 36:
+        snp['b36'] = pos
+    elif build == 37:
+        snp['b37'] = pos
+    elif build == 38:
+        snp['b38'] = pos
+        
+    return (snp, pos, cr, gen)
+
+def import_line_vcf(line, build):
+    if len(line) < 7:
+        raise Exception()
+    if line.startswith('#'):
+        raise Exception()
+    sline = line.split()
+    if len(sline) < 4:
+        raise Exception()
+    cr = sline[0];
+    if cr == 'chrY':
+        cr = 'Y'
+    elif cr == 'chrMT':
+        cr = 'MT'
+    elif cr == 'M':
+        cr = 'MT'
+    elif cr == 'chrM':
+        cr = 'MT'
+
+    pos = sline[1];
+    gen = sline[3]+sline[4];
+        
+    snp = {'id': sline[2],
         'cr': cr,
         'gen': gen }
 
