@@ -227,6 +227,7 @@ def detect_file_format(fname):
                     fmt = 'myheritage'
                 if "##fileformat=VCF" in line:
                     fmt = 'vcf'
+                    build = 38 # force build number for now
                     return (build, fmt)
                 continue
             if lc == 1 and line.startswith('RSID'):
