@@ -7,6 +7,25 @@ from tkinter import scrolledtext
 import haplomt
 import haploy
 
+bam_support=0
+
+if bam_support:
+    import bamload
+    import snpload
+
+def handle_bam_select():
+    bamname = tkinter.filedialog.askopenfile().name
+    bamload.get_build(bamname)
+    snpset = bamload.full_convert(bamname)
+    snpload.save(bamname+'.snp.txt', snpset, 38)
+    message='SNP file written to ' + bamname+'.snp.txt'
+    scr.config(state=tk.NORMAL)
+    scr.delete('1.0', tk.END)
+    scr.insert('1.0', message)
+    scr.config(state=tk.DISABLED)
+    scr.see("end")
+
+
 def handle_file_select():
     fname = tkinter.filedialog.askopenfile().name
     fnamevar.set(fname)
@@ -100,6 +119,9 @@ cbutton1 = tk.Button(cframe, text="Find MT", command=handle_findmt)
 cbutton1.pack(side=tk.LEFT, fill='x', expand=True)
 cbutton2 = tk.Button(cframe, text="Find Y", command=handle_findy)
 cbutton2.pack(side=tk.LEFT, fill='x', expand=True)
+if bam_support:
+    cbutton3 = tk.Button(cframe, text="Import BAM", command=handle_bam_select)
+    cbutton3.pack(side=tk.LEFT, fill='x', expand=True)
 
 # Result area
 scr=scrolledtext.ScrolledText(window, wrap=tk.WORD)  

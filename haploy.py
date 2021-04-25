@@ -17,23 +17,25 @@ def print_uptree(snpset, ut, do_print=True, b3x='b37'):
         if 'txt' in mut:
             txt=mut['txt']
         if mut[b3x] in y:
-            rep += "%-1s%-9s%s %-22s %-38s %s\n"%(mut['tag'], mut['g'], y[mut[b3x]]['gen'], mut['isog'], mut['raw'], txt) 
+            rep += "%-1s%-11s%s %-22s %-38s %s\n"%(mut['tag'], mut['g'], y[mut[b3x]]['gen'], mut['isog'], mut['raw'], txt) 
         else:
-            rep += "%-1s%-9s%s %-22s %-38s %s\n"%(mut['tag'], mut['g'], ' ', mut['isog'], mut['raw'], txt)
+            rep += "%-1s%-11s%s %-22s %-38s %s\n"%(mut['tag'], mut['g'], ' ', mut['isog'], mut['raw'], txt)
             pass
     if do_print:
         print(rep)
     return rep
 
-def print_extras(snpset, bt, do_print=True):
+def print_extras(snpset, bt, do_print=True, b3x='b37'):
     rep=''
     last=''
     out=[]
     outs=''
-    for e in bt['extras']:
+    sbt=sorted(bt['extras'], key=lambda x: int(x[b3x]))
+    for e in sbt:
         out.append(e['raw'])
         outs += e['raw'] + ' '
-        last=e['raw']
+        #outs += '%8s %s %s\n'%(e[b3x], e['t'], e['raw'])
+        q=e['raw']
     rep += 'Extra: '+outs+'\n'
     if do_print:
         print(rep)
@@ -90,7 +92,7 @@ def path_str(ut, n):
 
     return rep
 
-def report(fname, n, do_uptree=True, do_extra=True, do_all=False, filt='', force=''):
+def report(fname, n, do_uptree=True, do_extra=True, do_all=False, filt='', force='', min_match_level=0):
     rep=''
     snpset, meta = snpload.load(fname, ['Y'])
     if 'Y' not in snpset:
@@ -105,7 +107,7 @@ def report(fname, n, do_uptree=True, do_extra=True, do_all=False, filt='', force
         b3x='b37'
     if meta['build']==38:
         b3x='b38'
-    best_trees = yfind2(snpset, n, filt, force, b3x)
+    best_trees = yfind2(snpset, n, filt, force, b3x, min_match_level)
 
     for bt in best_trees:
         if do_all:
@@ -115,13 +117,11 @@ def report(fname, n, do_uptree=True, do_extra=True, do_all=False, filt='', force
             rep += print_uptree(snpset, bt['ut'], False, b3x)
 
         leaf_mut = bt['ut'][len(bt['ut'])-1]
-        #rep += "Result (%-8s %5.1f%% -%d +%d): %-8s (ISOGG: %s)\n"%(leaf_mut['raw'], bt['score'], bt['neg'], len(bt['extras']), leaf_mut['g'], leaf_mut['isog'])
-        rep += "Result (%-8s %5.1f%% -%d +%d): %-8s\n"%(leaf_mut['raw'], bt['score'], bt['neg'], len(bt['extras']), leaf_mut['g'])
-        #rep += "%s (ISOGG: %s)\n"%(path_str(bt['ut'], 15), leaf_mut['isog'])
+        rep += "Result (%-8s %5.1f%% %d -%d +%d): %-8s\n"%(leaf_mut['raw'], bt['score'], bt['tot'], bt['neg'], len(bt['extras']), leaf_mut['g'])
         rep += "%s\n"%(path_str(bt['ut'], 20))
 
         if do_extra:
-            rep += print_extras(snpset, bt, False)
+            rep += print_extras(snpset, bt, False, b3x)
     return rep
 
 
@@ -162,11 +162,11 @@ def ymatch(snpset, mut, b3x):
         return False
 
 # Finds n best Y-DNA matches by tracing all possible mutation paths in database
-def yfind2(snpset, nbest=5, filt='', force='', b3x='b37'):
+def yfind2(snpset, nbest=5, filt='', force='', b3x='b37', min_match_level=0):
     mt=snpset['Y'];
     all_mutations = []
     uptrees=[]
-    allmuts=[]
+    extras = []
     #TODO: support more exotic mutations?
 
     #find the route uptree for each mutation in snpset
@@ -178,11 +178,14 @@ def yfind2(snpset, nbest=5, filt='', force='', b3x='b37'):
                 #print(mt[pos], mut)
                 #if mut['!']==0:
                 all_mutations.append(mut)
+                if mut['l'] < min_match_level:
+                    continue
+                #TODO: faster uptree algo for big databases
                 uptree = yfind_uptree(snpset, mut['g'])
                 #print(uptree)
                 #print_uptree(snpset, uptree, do_print=True, b3x=b3x)
                 uptrees.append(uptree)
-                allmuts.append(mut)
+                extras.append(mut)
 
     #if there is a forced path set, find a path for it too
     if force:
@@ -213,7 +216,7 @@ def yfind2(snpset, nbest=5, filt='', force='', b3x='b37'):
         tag=''
         ut_copy=[]
         for i, mut in enumerate(ut):
-            if mut[b3x] in mt:
+            if mut[b3x] in mt and mut['t'] != '?':
                 bm_matched = 0 #bm_match(snpset, i, ut, bm)
                 dbm_matched = 0 #bm_match(snpset, i, ut, dbm)
                 if ymatch(snpset, mut, b3x):
@@ -248,7 +251,6 @@ def yfind2(snpset, nbest=5, filt='', force='', b3x='b37'):
             ut_copy.append(mut_copy)
 
         #find extras: mutations that are found in snpset but not in uptree
-        extras=allmuts.copy()
         toremove={}
         for mut in ut_copy:
             toremove[mut['raw']]=1
@@ -431,14 +433,18 @@ def load_yfull_snp_file(fname):
             b38=cells[3].text
             if b38 == '':
                 continue
+            der=cells[5].text
+            if len(der) > 1:
+                #TODO: multibase "SNP"
+                der='?'
             mut = {
                 'm': mname,
                 'mall': '?',
-                'g': '?',
+                'g': '',
                 'rs': '?',
                 'b37': cells[2].text,
                 'b38': b38,
-                'p': cells[5].text,
+                'p': der,
             }
             if mname not in haplo_yfull_muts_by_name:
                 haplo_yfull_muts_by_name[mname] = mut
@@ -486,8 +492,10 @@ def load_ybrowse_snp():
                 print('TODO:', tlv)
                 continue
             #print(tlv)
-            if tlv[0] != 'chrY' or  tlv[2] != 'snp' or (tlv[1] != 'point' and tlv[1] != 'indel'):
-                if tlv[1] != 'primate':
+            #TODO: indel works only partially due to varying coding, disabled importing
+            #if tlv[0] != 'chrY' or  tlv[2] != 'snp' or (tlv[1] != 'point' and tlv[1] != 'indel'):
+            if tlv[0] != 'chrY' or  tlv[2] != 'snp' or (tlv[1] != 'point'):
+                if tlv[1] != 'primate' and tlv[1] != 'indel':
                     print(tlv)
                 continue
             #TODO quality based filtering
@@ -608,16 +616,31 @@ def save_db2():
         for mut in haplo_muts_list:
             print(mut, file = f)
 
-def load_db2():
+def load_db2(min_tree_load_level=0):
     with open('haploy_map2.txt', 'r') as f:
         for line in f:
             mut = eval(line)
-            haplo_muts_list.append(mut)
+            if mut['l'] >= min_tree_load_level:
+                haplo_muts_list.append(mut)
 
 def show_db2():
     for m in sorted(haplo_muts_list, key=lambda e: int(e['b37'])):
         print(m)
 
+blacklist_etc='M8990'
+blacklist_yb='S27746 Z1908 V3596 PF6011'
+blacklist_yf='Z8834 Z7451 YP1757 YP2129 YP1822 YP1795 YP2228 YP1809 YP2229 YP1948 YP2226 YP1827 L508'
+blacklist_yf+=' Y125394 Y125393 Y125392 Y125391 Y125390 Y125389 Y125396 Y125397 Y125408 [report-spacer] V1896 '
+blacklist_rootambi='BY229589 Z2533 DFZ77 M11801 FT227770 Y3946 Y125419 FT227767 Y1578 CTS12490 FT227774 YP1740 Y125394 Y125393 Y125392 Y125391 Y125390' #TODO
+blacklist_rootambi+=' L1095 M11759 S6863 Y125417 Y125369 L1129 Y125404 Y125406 YP1807 Y17293 YP1838 YP1841 YP2250 Y125389' #maybe nean->A00
+blacklist_rootambi+=' FT227759 FT227756 FT227755 Y125410 M5667 PF713 M6176 AF12 M11839' #maybe nean->A0-T
+blacklist_unreliable='S782 M8963'
+blacklist_unreliable+=' YSC0000106 PF2752 M9059 PF2635 PF2634 M9058 BY29034 Y125400 Y125427 Y125380 Y125411 Y125376 Y125375 Y125396 Y125402 Y125412 Y125373 Y125371 Y125397 Y125408 PF586 BY7172 PF6823'
+blacklist_unreliable+=' FGC25944 Y125388 Y125384 Y125399 Y125377 Y125374 Y125413 Y125372 Y125370 Y125386 Z4996 Z4750 PF6146'
+blacklist_double='BY185290 Y193157'
+blacklist=blacklist_etc+' '+blacklist_yb+' '+blacklist_yf+' '+blacklist_rootambi+' '+blacklist_unreliable+' '+blacklist_double
+blacklist=blacklist.split()
+#blacklist=[]
 
 def decode_entry(e):
     global haplo_muts_by_name
@@ -626,12 +649,29 @@ def decode_entry(e):
         e2.append(e1.replace('(H)',''))
     m={}
     for e1 in e2:
+        if e1 in blacklist:
+            return m
+    for e1 in e2:
+        if e1 in haplo_muts_by_name:
+            mut = haplo_muts_by_name[e1]
+            m['f']=''
+            if not 'isog' in m:
+                m['isog']=''
+            m['isog']+=mut['g']+''
+            m['t']=mut['p']
+            m['b38']=mut['b38']
+            if 'b37' in mut:
+                m['b37']=mut['b37']
+            if 'b36' in mut:
+                m['b36']=mut['b36']
+            break
+    for e1 in e2:
         if e1 in haplo_ybrowse_muts_by_name:
             mut = haplo_ybrowse_muts_by_name[e1]
             m['f']=''
-            if not 'isogg' in m:
+            if not 'isog' in m:
                 m['isog']=''
-            #m['isog']+=mut['g']+'(YB)'
+            #m['isog']+=mut['g']+'+(YB)'
             m['t']=mut['p']
             m['b38']=mut['b38']
             if 'b37' in mut:
@@ -643,23 +683,11 @@ def decode_entry(e):
         if e1 in haplo_yfull_muts_by_name:
             mut = haplo_yfull_muts_by_name[e1]
             m['f']=''
-            if not 'isogg' in m:
+            if not 'isog' in m:
                 m['isog']=''
-            m['t']=mut['p']
-            m['b38']=mut['b38']
-            if 'b37' in mut:
-                m['b37']=mut['b37']
-            if 'b36' in mut:
-                m['b36']=mut['b36']
-            break
-    for e1 in e2:
-        if e1 in haplo_muts_by_name:
-            mut = haplo_muts_by_name[e1]
-            m['f']=''
-            #if not 'isogg' in m:
-            #    m['isog']=''
-            m['isog']=''
-            m['isog']+=mut['g']+''
+            #m['isog']+=mut['g']+'+(YF)'
+            if 't' in m and mut['p'] != '?' and m['t'] != mut['p']:
+                print('Mismatch:', m, mut)
             m['t']=mut['p']
             m['b38']=mut['b38']
             if 'b37' in mut:
@@ -754,20 +782,18 @@ def yfull_recurse_list(ul_in, level, fileroot):
                     print('No pos found for', m)
                     global no_pos_counter
                     no_pos_counter+=1
-                #    dec['isog']='n/a'
-                #    dec['t']='?'
-                #    dec['b38']='0'
-                #    dec['b37']='0'
-                #    dec['b36']='0'
-                    continue
-                if not 'b37' in dec or not dec['b37']:
+                    dec['isog']='n/a'
+                    dec['t']='?'
+                    dec['b38']='0'
+                    dec['b37']='0'
+                    dec['b36']='0'
+                if not 'b37' in dec or not dec['b37'] or dec['b37'] == 'None':
                     print('TODO b37:', mutse, dec)
                     dec['b37'] = '0'
-                    continue #TODO: include also build38-only snps
-                if not 'b38' in dec or not dec['b38']:
+                if not 'b38' in dec or not dec['b38'] or dec['b38'] == 'None':
                     print('TODO b38:', mutse, dec)
                     dec['b38'] = '0'
-                if not 'b36' in dec or not 'b36' in dec:
+                if not 'b36' in dec or not dec['b38'] or dec['b36'] == 'None':
                     print('TODO b36:', mutse, dec)
                     dec['b36'] = '0'
                 #muts['f']=dec['f']

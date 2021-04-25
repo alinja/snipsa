@@ -17,8 +17,8 @@ PYTHON_EMBED=python-3.9.2-embed-amd64
 
 echo Preparing Snipsa Windows package...
 
-rm -rf $SNIPSAWIN_DIR/
-rm snipsawin.zip
+rm -rf $SNIPSAWIN_DIR/ || true
+rm snipsawin.zip || true
 mkdir $SNIPSAWIN_DIR
 
 #python
@@ -43,8 +43,10 @@ cp \
 	haploy.py haploy_find.py haploy_db_import.py \
 	haplomt_map.txt haploy_map2.txt \
 	snpload.py \
+	bamload.py \
 	snipsa-gui.py \
 	$SNIPSAWIN_DIR/snipsa/
+
 
 #starter
 cp snipsa.bat $SNIPSAWIN_DIR/

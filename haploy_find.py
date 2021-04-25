@@ -11,12 +11,15 @@ n_multi = 5
 force=''
 filt=''
 all=False
+min_match_level=0
+min_tree_load_level=0
 new_yfind=1
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-s', '--single', help='Analyse a path for single group')
 parser.add_argument('-a', '--all', action='store_true', help='Show listing of all found mutations')
 parser.add_argument('-n', '--num', help='Show num best matches')
+parser.add_argument('-q', '--quick', help='Quick mode')
 parser.add_argument('file', nargs='+')
 
 args = parser.parse_args()
@@ -28,14 +31,17 @@ if args.num:
     n_multi = int(args.num)
 if args.all:
     all=True
+if args.quick:
+    min_match_level=int(args.quick)
+    min_tree_load_level=int(args.quick)
 
 if len(args.file) < 2:
     
     if new_yfind:
         print("Loading DB2...")
-        haploy.load_db2()
+        haploy.load_db2(min_tree_load_level=min_tree_load_level)
         print("DB loaded!")
-        rep = haploy.report(args.file[0], n_single, do_all=all, filt=filt, force=force)
+        rep = haploy.report(args.file[0], n_single, do_all=all, filt=filt, force=force, min_match_level=min_match_level)
         print(rep)
     else:
         # keep old one available
@@ -59,7 +65,7 @@ else:
     lookfor = args.file[0].split(',')
     if new_yfind:
         print("Loading DB...")
-        haploy.load_db2()
+        haploy.load_db2(min_tree_load_level=min_tree_load_level)
         print("DB loaded!")
         for fname in args.file[1:]:
             snpset, meta = snpload.load(fname, ['Y'])
@@ -68,13 +74,13 @@ else:
                 print('%s: no Y data'%fname)
                 continue
 
-            print('Build: %d'%meta['build'])
+            #print('Build: %d'%meta['build'])
             b3x='b36'
             if meta['build']==37:
                 b3x='b37'
             if meta['build']==38:
                 b3x='b38'
-            best_trees = haploy.yfind2(snpset, n_multi, filt, force, b3x)
+            best_trees = haploy.yfind2(snpset, n_multi, filt, force, b3x, min_match_level)
 
             found=0
             for bt in best_trees:
@@ -92,7 +98,7 @@ else:
                 for bt in best_trees:
                     leaf_mut = bt['ut'][len(bt['ut'])-1]
                     #print("Result (%-8s %5.1f%% -%d +%d): %-8s (ISOGG: %s)"%(leaf_mut['raw'], bt['score'], bt['neg'], len(bt['extras']), haploy.path_str(bt['ut'], 15), leaf_mut['isog']))
-                    print("Result (%-8s %5.1f%% -%d +%d): %-8s"%(leaf_mut['raw'], bt['score'], bt['neg'], len(bt['extras']), leaf_mut['g']))
+                    print("Result (%-8s %5.1f%% %d -%d +%d): %-8s"%(leaf_mut['raw'], bt['score'], bt['tot'], bt['neg'], len(bt['extras']), leaf_mut['g']))
                     print("  %s"%(haploy.path_str(bt['ut'], 20)))
             else:
                 print('%s: no match'%fname)
