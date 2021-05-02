@@ -435,7 +435,14 @@ def setup_conv(in_build):
     global lo_37to38
     global lo_38to37
     print("Loading LiftOver conversion chain file for build %d..."%in_build)
-    if in_build == 37:
+    if in_build == 19:
+        b3x='b37'
+        str_db_file='str_hg19.gff3'
+        contig='chrY'
+        contigmt='chrM'
+        pos_triplet_fn = pos_triplet_37
+        lo_37to38 = LiftOver('crossmap/GRCh37_to_GRCh38.chain.gz')
+    elif in_build == 37:
         b3x='b37'
         str_db_file='str_hg19.gff3'
         contig='Y'
@@ -451,10 +458,12 @@ def setup_conv(in_build):
         lo_38to37 = LiftOver('crossmap/GRCh38_to_GRCh37.chain.gz')
 
 #TODO:temporary interface, redo
+convert_ystr=1
+convert_y=1
+convert_mt=1
+convert_snpauto=0
 def full_convert(samfname):
     index_if_needed(samfname)
-    build = get_build(samfname)
-    setup_conv(build)
     samfile = pysam.AlignmentFile(samfname, get_rtype(samfname))
        
     snpset={}
@@ -465,37 +474,30 @@ def full_convert(samfname):
     ysrts=0
     mtnsps=0
     
-    snpauto_stuff=0
-    if snpauto_stuff:
+    if convert_snpauto:
         print("Loading SNP DB...")
         load_snpauto_db()
+        print("Reading SNPs...")
         asnps = find_autosnps(snpset, samfile)
-        #snpload.save(samfname+'.snp.txt', snpset)
         global snpauto_by_b37
         snpauto_by_b37 = {}
 
-    ystr_stuff=1
-    if ystr_stuff:
+    if convert_ystr:
         print("Loading STR DB...")
         load_ystr_db()
         ysrts = find_ystrs(snpset, samfile)
-        #snpload.save(samfname+'.snp.txt', snpset)
 
-    conv=1
-    if conv:
-        print("Loading SNP DB2...")
+    if convert_y:
+        print("Loading Y SNP DB2...")
         load_ysnp_db()
-        print("Reading SNPs...")
+        print("Reading Y SNPs...")
         ysnps = find_ysnps(snpset, samfile)
-        #snpload.save(samfname+'.snp.txt', snpset)
 
-    mtconv=1
-    if mtconv:
+    if convert_mt:
         print("Loading MT DB...")
         load_mtdb()
         print("Reading SNPs...")
         mtnsps = find_mtsnps(snpset, samfile)
-        #snpload.save(samfname+'.snp.txt', snpset)
 
     samfile.close()
     

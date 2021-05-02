@@ -70,6 +70,18 @@ def print_data(do_print=True):
         print(rep)
     return rep
 
+def print_links(gr, do_print=True):
+    rep=''
+
+    rep += 'Links:\n'
+    rep += 'https://www.yfull.com/tree/%s/\n'%(gr)
+    rep += 'https://phylogeographer.com/scripts/heatmap.php?newlookup=%s\n'%(gr)
+    rep += 'http://scaledinnovation.com/gg/snpTracker.html?snp=%s\n'%(gr)
+
+    if do_print:
+        print(rep)
+    return rep
+
 def path_str(ut, n):
     rep=''
 
@@ -117,11 +129,13 @@ def report(fname, n, do_uptree=True, do_extra=True, do_all=False, filt='', force
             rep += print_uptree(snpset, bt['ut'], False, b3x)
 
         leaf_mut = bt['ut'][len(bt['ut'])-1]
-        rep += "Result (%-8s %5.1f%% %d -%d +%d): %-8s\n"%(leaf_mut['raw'], bt['score'], bt['tot'], bt['neg'], len(bt['extras']), leaf_mut['g'])
+        rep += "Result (%.1f%% %d -%d +%d): %-8s\n"%(bt['score'], bt['tot'], bt['neg'], len(bt['extras']), leaf_mut['g'])
         rep += "%s\n"%(path_str(bt['ut'], 20))
 
         if do_extra:
             rep += print_extras(snpset, bt, False, b3x)
+
+        rep += print_links(leaf_mut['g'], False)
     return rep
 
 
@@ -131,19 +145,14 @@ def yfind_uptree(snpset, find_g):
     uptree = []
     sames = []
     sameg = ''
+    #print("Scanning uptree", find_g)
     for mut in reversed(haplo_muts_list):
         if found == 0:
-            if mut['g'] == sameg:
-                sames.append(mut)
-            else:
-                sameg = mut['g']
-                sames = []
-                sames.append(mut)
             if mut['g'] == find_g: #mut_leaf['g']: #TODO: g?
                 found = 1
                 depth = mut['l']
                 g = mut['g']
-                uptree.extend(reversed(sames))
+                uptree.append(mut)
         else:
             if mut['g'] == g:
                 uptree.insert(0, mut)
@@ -166,10 +175,11 @@ def yfind2(snpset, nbest=5, filt='', force='', b3x='b37', min_match_level=0):
     mt=snpset['Y'];
     all_mutations = []
     uptrees=[]
-    extras = []
+    extras_all = []
     #TODO: support more exotic mutations?
 
     #find the route uptree for each mutation in snpset
+    prev_uptree_g = ''
     for mut in haplo_muts_list:
         pos = mut[b3x]
         if pos in mt:
@@ -181,11 +191,15 @@ def yfind2(snpset, nbest=5, filt='', force='', b3x='b37', min_match_level=0):
                 if mut['l'] < min_match_level:
                     continue
                 #TODO: faster uptree algo for big databases
+                extras_all.append(mut)
+                if mut['g'] == prev_uptree_g:
+                    #no need to add same group many times, will speed up considerably
+                    continue
+                prev_uptree_g = mut['g']
                 uptree = yfind_uptree(snpset, mut['g'])
                 #print(uptree)
                 #print_uptree(snpset, uptree, do_print=True, b3x=b3x)
                 uptrees.append(uptree)
-                extras.append(mut)
 
     #if there is a forced path set, find a path for it too
     if force:
@@ -252,6 +266,7 @@ def yfind2(snpset, nbest=5, filt='', force='', b3x='b37', min_match_level=0):
 
         #find extras: mutations that are found in snpset but not in uptree
         toremove={}
+        extras=extras_all.copy()
         for mut in ut_copy:
             toremove[mut['raw']]=1
         extras = filter(lambda e: not e['raw'] in toremove, extras)
@@ -387,10 +402,12 @@ def load_snp():
             #p=sline[6].replace('-.', '->',1).split('->') 
             p=sline[6].split('->') 
             if len(p) < 2:
-                print('TODO:', line) #TODO: fix other bugs in db
+                print('TODO3:', line) #TODO: format errors
                 continue
-            else:
-                p=p[1][0].upper()
+            if len(p[0]) > 1 or len(p[1]) > 1:
+                print('TODO4:', line) #TODO: multibase
+                continue
+            p=p[1][0].upper()
             mut = {
                 'm': mname,
                 'mall': sline[0],
@@ -414,6 +431,7 @@ def load_snp():
 
 haplo_yfull_muts_by_name = {}
 haplo_yfull_muts_by_b38 = {}
+
 
 #Imports database from YFull /snp-list/ URL
 def load_yfull_snp_file(fname):
@@ -628,19 +646,24 @@ def show_db2():
         print(m)
 
 blacklist_etc='M8990'
-blacklist_yb='S27746 Z1908 V3596 PF6011'
+blacklist_yb='Y1477 Y13952 Z6132 Z6171 BY2829 PF1401 M11813 YSC0001289 BY2821 M11836 M3745 M11838 M11843'
 blacklist_yf='Z8834 Z7451 YP1757 YP2129 YP1822 YP1795 YP2228 YP1809 YP2229 YP1948 YP2226 YP1827 L508'
-blacklist_yf+=' Y125394 Y125393 Y125392 Y125391 Y125390 Y125389 Y125396 Y125397 Y125408 [report-spacer] V1896 '
+blacklist_yf+=' Y125394 Y125393 Y125392 Y125391 Y125390 Y125389 Y125396 Y125397 Y125408 [report-spacer] V1896 PAGE65.1 Y2363 PF3515 PF3512 PF3507 PF3596 Z6023 M547 A3073 Z1716 PF5827 PF1534 PF6011'
 blacklist_rootambi='BY229589 Z2533 DFZ77 M11801 FT227770 Y3946 Y125419 FT227767 Y1578 CTS12490 FT227774 YP1740 Y125394 Y125393 Y125392 Y125391 Y125390' #TODO
 blacklist_rootambi+=' L1095 M11759 S6863 Y125417 Y125369 L1129 Y125404 Y125406 YP1807 Y17293 YP1838 YP1841 YP2250 Y125389' #maybe nean->A00
 blacklist_rootambi+=' FT227759 FT227756 FT227755 Y125410 M5667 PF713 M6176 AF12 M11839' #maybe nean->A0-T
 blacklist_unreliable='S782 M8963'
-blacklist_unreliable+=' YSC0000106 PF2752 M9059 PF2635 PF2634 M9058 BY29034 Y125400 Y125427 Y125380 Y125411 Y125376 Y125375 Y125396 Y125402 Y125412 Y125373 Y125371 Y125397 Y125408 PF586 BY7172 PF6823'
-blacklist_unreliable+=' FGC25944 Y125388 Y125384 Y125399 Y125377 Y125374 Y125413 Y125372 Y125370 Y125386 Z4996 Z4750 PF6146'
 blacklist_double='BY185290 Y193157'
 blacklist=blacklist_etc+' '+blacklist_yb+' '+blacklist_yf+' '+blacklist_rootambi+' '+blacklist_unreliable+' '+blacklist_double
 blacklist=blacklist.split()
 #blacklist=[]
+unreliable_region_b38 = [
+    [1       , 2781479 ],
+    [10072350, 11686750],
+    [20054914, 20351054],
+    [26637971, 26673210],
+    [56887903, 57217415]]
+
 
 def decode_entry(e):
     global haplo_muts_by_name
@@ -782,19 +805,24 @@ def yfull_recurse_list(ul_in, level, fileroot):
                     print('No pos found for', m)
                     global no_pos_counter
                     no_pos_counter+=1
-                    dec['isog']='n/a'
+                    dec['isog']='[no loc]'
                     dec['t']='?'
                     dec['b38']='0'
                     dec['b37']='0'
                     dec['b36']='0'
+                for region in unreliable_region_b38:
+                    if int(dec['b38']) >= region[0] and int(dec['b38']) <= region[1]:
+                        dec['isog']='[unreliable snp]'
+                        dec['t']='?'
+                        dec['b38']='0'
+                        dec['b37']='0'
+                        dec['b36']='0'
                 if not 'b37' in dec or not dec['b37'] or dec['b37'] == 'None':
-                    print('TODO b37:', mutse, dec)
                     dec['b37'] = '0'
                 if not 'b38' in dec or not dec['b38'] or dec['b38'] == 'None':
                     print('TODO b38:', mutse, dec)
                     dec['b38'] = '0'
                 if not 'b36' in dec or not dec['b38'] or dec['b36'] == 'None':
-                    print('TODO b36:', mutse, dec)
                     dec['b36'] = '0'
                 #muts['f']=dec['f']
                 mutse['t']=dec['t']

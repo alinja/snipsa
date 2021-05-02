@@ -98,7 +98,7 @@ else:
                 for bt in best_trees:
                     leaf_mut = bt['ut'][len(bt['ut'])-1]
                     #print("Result (%-8s %5.1f%% -%d +%d): %-8s (ISOGG: %s)"%(leaf_mut['raw'], bt['score'], bt['neg'], len(bt['extras']), haploy.path_str(bt['ut'], 15), leaf_mut['isog']))
-                    print("Result (%-8s %5.1f%% %d -%d +%d): %-8s"%(leaf_mut['raw'], bt['score'], bt['tot'], bt['neg'], len(bt['extras']), leaf_mut['g']))
+                    print("Result (%.1f%% %d -%d +%d): %-8s"%(bt['score'], bt['tot'], bt['neg'], len(bt['extras']), leaf_mut['g']))
                     print("  %s"%(haploy.path_str(bt['ut'], 20)))
             else:
                 print('%s: no match'%fname)
