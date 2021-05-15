@@ -7,6 +7,7 @@ import urllib.request
 import zipfile
 import gzip
 from pyliftover import LiftOver
+import haploy
 
 import pysam
 import argparse
@@ -21,6 +22,7 @@ pos_triplet_fn = None
 lo_37to38 = None
 lo_38to37 = None
 
+load_ybrowse=0
 
 snp_by_b37 = {}
 
@@ -33,6 +35,14 @@ def load_ysnp_db():
             #    snp_by_b37[snp[b3x]] = snp
             if b3x in snp:
                 snp_by_b37[snp[b3x]] = snp
+
+def load_ysnp_ybrowse_db():
+    haploy.load_ybrowse_snp()
+    global snp_by_b37
+    snp_by_b37 = haploy.haplo_ybrowse_muts_by_b38
+    if b3x != 'b38':
+        #TODO: build conversion
+        raise LookupError
 
 
 #Genotype calling from pileup column
@@ -50,7 +60,6 @@ def col_to_genotype(col):
             continue
         if r.alignment.mapq < min_mapqual:
             continue
-        #print(r.alignment.mapq)
         #print(r.indel)
         if r.is_del:
             #print('TODO del:', r)
@@ -65,11 +74,14 @@ def col_to_genotype(col):
             #snp db pos is offset like this
             stri += 'I'
         else:
-            try:
-                q = ord(r.alignment.qual[r.query_position])
-                #print(r)
-            except UnicodeDecodeError:
-                return '--'
+            if r.alignment.qual:
+                try:
+                    q = ord(r.alignment.qual[r.query_position])
+                    #print(r)
+                except UnicodeDecodeError:
+                    return '--'
+            else:
+                q = 255
             if q >= min_qual:
                 stri += r.alignment.query_sequence[r.query_position]
     #print(stri)
@@ -489,7 +501,10 @@ def full_convert(samfname):
 
     if convert_y:
         print("Loading Y SNP DB2...")
-        load_ysnp_db()
+        if load_ybrowse:
+            load_ysnp_ybrowse_db()
+        else:
+            load_ysnp_db()
         print("Reading Y SNPs...")
         ysnps = find_ysnps(snpset, samfile)
 

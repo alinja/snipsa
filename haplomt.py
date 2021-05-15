@@ -292,6 +292,16 @@ def decode_entry(e):
     m['f']=e[0].upper()
     m['t']=e[-1].upper()
     m['p']=non_decimal_re.sub('', e)
+    if not e[-2].isdigit():
+        #TODO insertions
+        print('TODO', e)
+        #m['p']='0'
+        m['t']='I'
+    if not e[1].isdigit() or e[-1] == 'd':
+        #TODO dels
+        print('TODO', e)
+        #m['p']='0'
+        m['t']='D'
     m['!']=bm
     return m
     

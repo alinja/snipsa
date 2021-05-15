@@ -34,6 +34,7 @@ parser.add_argument('--no-mt', action="store_true", help='Skip MT')
 parser.add_argument('--no-y', action="store_true", help='Skip Y')
 parser.add_argument('--no-ystr', action="store_true", help='Skip Y-STR')
 parser.add_argument('--auto', action="store_true", help='Convert autosomal')
+parser.add_argument('--ybrowse', action="store_true", help='Use full ybrowse database positions')
 parser.add_argument('file', nargs='+')
 args = parser.parse_args()
 
@@ -55,6 +56,8 @@ if args.no_ystr:
     bamload.convert_ystr=0
 if args.auto:
     bamload.convert_snpauto=1
+if args.ybrowse:
+    bamload.load_ybrowse=1
 
 bamload.min_qual=min_qual
 bamload.min_mapqual=min_mapqual

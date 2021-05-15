@@ -5,6 +5,7 @@ import copy
 import snpload
 from bs4 import BeautifulSoup
 import urllib.request
+import json
 
 def print_uptree(snpset, ut, do_print=True, b3x='b37'):
     rep=''
@@ -17,9 +18,9 @@ def print_uptree(snpset, ut, do_print=True, b3x='b37'):
         if 'txt' in mut:
             txt=mut['txt']
         if mut[b3x] in y:
-            rep += "%-1s%-11s%s %-22s %-38s %s\n"%(mut['tag'], mut['g'], y[mut[b3x]]['gen'], mut['isog'], mut['raw'], txt) 
+            rep += "%-1s%-11s%s %-30s %-32s %s\n"%(mut['tag'], mut['g'], y[mut[b3x]]['gen'], mut['raw'], mut['isog'], txt)
         else:
-            rep += "%-1s%-11s%s %-22s %-38s %s\n"%(mut['tag'], mut['g'], ' ', mut['isog'], mut['raw'], txt)
+            rep += "%-1s%-11s%s %-30s %-32s %s\n"%(mut['tag'], mut['g'], ' ', mut['raw'], mut['isog'], txt)
             pass
     if do_print:
         print(rep)
@@ -138,6 +139,27 @@ def report(fname, n, do_uptree=True, do_extra=True, do_all=False, filt='', force
         rep += print_links(leaf_mut['g'], False)
     return rep
 
+#for analysing separate ftdna roots, not used currently
+def yfind_roots(snpset):
+    roots_list = []
+
+    s=-1
+    rflag=0
+    for i, m in enumerate(haplo_muts_list):
+        #print(i, m, s)
+        if m['l'] == 0:
+            if s >= 0 and rflag==0:
+                roots_list.append(haplo_muts_list[s:i-1])
+            s=i
+            rflag=1
+        else:
+            rflag=0
+    roots_list.append(haplo_muts_list[s:])
+
+    for r in roots_list:
+        print(len(r))
+
+    return roots_list
 
 #Create a list of mutations on a path upwards from a mutation
 def yfind_uptree(snpset, find_g):
@@ -366,6 +388,8 @@ haplo_muts_by_b37 = {}
 haplo_muts_by_b36 = {}
 haplo_muts_by_name = {}
 haplo_muts_list = []
+haplo_ftdna_muts_list = []
+haplo_ftdna_muts_by_name = {}
 
 #Imports database from ISOGG spreadsheet
 def load_snp():
@@ -634,6 +658,11 @@ def save_db2():
         for mut in haplo_muts_list:
             print(mut, file = f)
 
+def save_db3():
+    with open('haploy_map2.txt', 'w') as f:
+        for mut in haplo_ftdna_muts_list:
+            print(mut, file = f)
+
 def load_db2(min_tree_load_level=0):
     with open('haploy_map2.txt', 'r') as f:
         for line in f:
@@ -645,14 +674,14 @@ def show_db2():
     for m in sorted(haplo_muts_list, key=lambda e: int(e['b37'])):
         print(m)
 
-blacklist_etc='M8990'
-blacklist_yb='Y1477 Y13952 Z6132 Z6171 BY2829 PF1401 M11813 YSC0001289 BY2821 M11836 M3745 M11838 M11843'
+blacklist_etc='M8990' #str etc
+blacklist_yb='Z1908  Y13952 Z6171 PF1401 M11813 YSC0001289 BY2821 M11836 M3745 M11838 M11843'
 blacklist_yf='Z8834 Z7451 YP1757 YP2129 YP1822 YP1795 YP2228 YP1809 YP2229 YP1948 YP2226 YP1827 L508'
-blacklist_yf+=' Y125394 Y125393 Y125392 Y125391 Y125390 Y125389 Y125396 Y125397 Y125408 [report-spacer] V1896 PAGE65.1 Y2363 PF3515 PF3512 PF3507 PF3596 Z6023 M547 A3073 Z1716 PF5827 PF1534 PF6011'
+blacklist_yf+=' Y125394 Y125393 Y125392 Y125391 Y125390 Y125389 Y125396 Y125397 Y125408 [report-spacer] V1896 PAGE65.1 Y2363 PF3515 PF3512 PF3507 PF3596 Z6023 M547 A3073 Z1716 PF5827 PF1534 PF6011 PF2634 PF2635'
 blacklist_rootambi='BY229589 Z2533 DFZ77 M11801 FT227770 Y3946 Y125419 FT227767 Y1578 CTS12490 FT227774 YP1740 Y125394 Y125393 Y125392 Y125391 Y125390' #TODO
 blacklist_rootambi+=' L1095 M11759 S6863 Y125417 Y125369 L1129 Y125404 Y125406 YP1807 Y17293 YP1838 YP1841 YP2250 Y125389' #maybe nean->A00
 blacklist_rootambi+=' FT227759 FT227756 FT227755 Y125410 M5667 PF713 M6176 AF12 M11839' #maybe nean->A0-T
-blacklist_unreliable='S782 M8963'
+blacklist_unreliable='S782 M8963 Z6132  S27746 Y1477 BY2829'
 blacklist_double='BY185290 Y193157'
 blacklist=blacklist_etc+' '+blacklist_yb+' '+blacklist_yf+' '+blacklist_rootambi+' '+blacklist_unreliable+' '+blacklist_double
 blacklist=blacklist.split()
@@ -718,6 +747,25 @@ def decode_entry(e):
             if 'b36' in mut:
                 m['b36']=mut['b36']
             break
+
+    #cross-checking
+    for e1 in e2:
+        if e1 in haplo_ftdna_muts_by_name:
+            mut = haplo_ftdna_muts_by_name[e1]
+            if 'b38' in m and 't' in m and mut['t'] != '?':
+                if int(mut['b38']) > 0:
+                    if mut['b38'] != m['b38'] :
+                        print('FTDNA pos mismatch:', e, mut['b38'], m['b38'], mut, m)
+                    else:
+                        if mut['t'] != m['t']:
+                            print('FTDNA der mismatch:', e, mut['t'], m['t'], mut, m)
+                #if not 'isog' in m:
+                #    m['isog']=''
+                #else:
+                if 'isog' in m:
+                    if m['isog']:
+                        m['isog']+=', '
+                    m['isog']+=mut['g']+''
     return m
 
 def yfull_fname(group):
@@ -812,6 +860,7 @@ def yfull_recurse_list(ul_in, level, fileroot):
                     dec['b36']='0'
                 for region in unreliable_region_b38:
                     if int(dec['b38']) >= region[0] and int(dec['b38']) <= region[1]:
+                        #print('Unreliable snp', m)
                         dec['isog']='[unreliable snp]'
                         dec['t']='?'
                         dec['b38']='0'
@@ -875,8 +924,75 @@ def import_yfull_tree():
     print('No pos found for %d tree nodes'%no_pos_counter)
     print('Tree database size is %d nodes'%len(haplo_muts_list))
 
+ftdna_by_id={}
 
+def recurse_ftdna_node(level, id):
+    n = ftdna_by_id[id]
+    #print('recurse_ftdna_node', level, id, n['name'])
+    for v in n['variants']:
+        try:
+            muts={}
+            muts['l']=level
+            muts['g']=n['name']
+            muts['raw']=v['variant']
+            muts['t']=v['derived']
+            muts['isog']=''
+            muts['b36']='0' #TODO
+            muts['b37']='0' #TODO
+            muts['b38']=str(v['position'])
+            if v['position'] < 1:
+                print('TODO0:', v)
+                muts['t']='?'
+                muts['isog']='[no loc]'
+            if len(v['ancestral']) > 1:
+                print('TODO1:', v)
+                muts['t']='?'
+                muts['isog']='[no loc]'
+            if len(v['derived']) > 1:
+                print('TODO2:', v)
+                muts['t']='?'
+                muts['isog']='[no loc]'
+            #print(muts)
+            haplo_ftdna_muts_list.append(muts)
+            haplo_ftdna_muts_by_name[v['variant']] = muts
+        except KeyError:
+            print('TODO3:', v)
 
+    if not 'children' in n:
+        return
+    #print('->', n['children'])
+    for c in n['children']:
+        recurse_ftdna_node(level+1, c);
+
+#wget https://www.familytreedna.com/public/mt-dna-haplotree/get -O ftdnamt.json
+def import_ftdna_tree():
+    fname = 'ftdnay.json'
+    try:
+        with open(fname) as f:
+            pass
+    except OSError:
+        print('File not found: ' +fname)
+        return
+        #urllib.request.urlretrieve("https://www.familytreedna.com/public/y-dna-haplotree/get", fname);
+
+    with open(fname) as f:
+        print('Importing file: ' +fname)
+        data = json.load(f)
+        print('FTDNA:', data['publishedDate'])
+
+        for r in data['roots']:
+            ftdna_by_id[r['haplogroupId']] = r.copy()
+        for r in data['allNodes']:
+            n = data['allNodes'][r]
+            #print(n)
+            ftdna_by_id[n['haplogroupId']] = n.copy()
+        skip=0
+        for r in data['roots']:
+            if not skip:
+                print('Root:', r['haplogroupId'], r['name'], r['children'])
+                recurse_ftdna_node(0, r['haplogroupId'])
+                skip=1
+    print('FTDNA Tree database size is %d nodes'%len(haplo_ftdna_muts_list))
 
 
 
