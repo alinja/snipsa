@@ -39,7 +39,7 @@ if len(args.file) < 2:
     
     if new_yfind:
         print("Loading DB2...")
-        haploy.load_db2(min_tree_load_level=min_tree_load_level)
+        haploy.load_db2j(min_tree_load_level=min_tree_load_level)
         print("DB loaded!")
         rep = haploy.report(args.file[0], n_single, do_all=all, filt=filt, force=force, min_match_level=min_match_level)
         print(rep)
@@ -65,7 +65,7 @@ else:
     lookfor = args.file[0].split(',')
     if new_yfind:
         print("Loading DB...")
-        haploy.load_db2(min_tree_load_level=min_tree_load_level)
+        haploy.load_db2j(min_tree_load_level=min_tree_load_level)
         print("DB loaded!")
         for fname in args.file[1:]:
             snpset, meta = snpload.load(fname, ['Y'])

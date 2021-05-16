@@ -56,7 +56,7 @@ def handle_findy():
     global dby_loaded
     if not dby_loaded:
         dby_loaded = 1
-        haploy.load_db2()
+        haploy.load_db2j()
     do_uptree = report_snps.get()
     do_all = report_all.get()
     force = pathvar.get()
@@ -73,7 +73,7 @@ def handle_findy():
 
 window = tk.Tk()
 window.title("Snipsa GUI")
-window.geometry("900x700")
+window.geometry("950x700")
 window.minsize(600, 300)
 
 hdrframe=tk.Frame(window)

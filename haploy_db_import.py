@@ -25,7 +25,6 @@ haploy.convert_build38to36()
 
 print("Running conversion to support build 37 matching...")
 haploy.convert_build38to37()
-#haploy.save_ybrowse_db()
 
 print("Importing tree DB from YFull...")
 haploy.import_yfull_tree()
@@ -35,11 +34,10 @@ print("Writing local mutation DB (legacy)...")
 haploy.save_db()
 
 if use_ftdna_tree:
-    print("Writing local mutation DB (FTDNA tree)...")
-    haploy.save_db3()
+    print("Writing local mutation DB (FTDNA tree json)...")
+    haploy.save_db3j()
 else:
-    print("Writing local mutation DB (Yfull tree)...")
-    #haploy.save_yfull_db()
-    haploy.save_db2()
+    print("Writing local mutation DB (Yfull tree json)...")
+    haploy.save_db2j()
 
 print("Database import done!")

@@ -6,6 +6,7 @@ import csv
 import urllib.request
 import zipfile
 import gzip
+import json
 from pyliftover import LiftOver
 import haploy
 
@@ -26,13 +27,10 @@ load_ybrowse=0
 
 snp_by_b37 = {}
 
-def load_ysnp_db():
-    global b3x
-    with open('haploy_map2.txt', 'r') as f:
-        for line in f:
-            snp = eval(line)
-            #if snp['cr'] == 'MT':
-            #    snp_by_b37[snp[b3x]] = snp
+def load_ysnp_dbj(min_tree_load_level=0):
+    with open('haploy_map2j.txt', 'r') as f:
+        jdata = json.load(f)
+        for snp in jdata['muts']:
             if b3x in snp:
                 snp_by_b37[snp[b3x]] = snp
 
@@ -504,7 +502,7 @@ def full_convert(samfname):
         if load_ybrowse:
             load_ysnp_ybrowse_db()
         else:
-            load_ysnp_db()
+            load_ysnp_dbj()
         print("Reading Y SNPs...")
         ysnps = find_ysnps(snpset, samfile)
 

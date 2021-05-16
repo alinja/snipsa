@@ -41,7 +41,7 @@ mkdir $SNIPSAWIN_DIR/snipsa
 cp \
 	haplomt.py haplomt_find.py haplomt_db_import.py \
 	haploy.py haploy_find.py haploy_db_import.py \
-	haplomt_map.txt haploy_map2.txt \
+	haplomt_map.txt haploy_map2j.txt \
 	snpload.py \
 	bamload.py \
 	snipsa-gui.py \

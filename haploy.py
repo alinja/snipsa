@@ -65,7 +65,11 @@ def print_all(snpset, bt, do_print=True):
 def print_data(do_print=True):
     rep=''
 
-    rep += 'Based on data from yfull.com on 2020-03-06 (CC-BY) and isogg.org/tree Y-DNA Tree 2019-2020 and ybrowse.org (CC BY-NC-SA)\n'
+    rep += 'Based on data from:\n'
+    rep += 'yfull.com %s [CC BY]\n'%haplo_muts_yfull_info
+    rep += 'isogg.org/tree Y-DNA Tree %s [CC BY-NC-SA 3.0]\n'%haplo_isogg_info
+    rep += 'ybrowse.org %s [CC BY-NC-SA Thomas Krahn]\n'%haplo_ybrowse_info
+    rep += 'ftdna.com %s\n'%ftdna_info
 
     if do_print:
         print(rep)
@@ -383,6 +387,8 @@ def _mk_sort_key(mut):
 
 
 
+haplo_isogg_info = 'Version: 15.73   Date: 11 July 2020'
+haplo_muts_yfull_info = ''
 haplo_muts_by_b38 = {}
 haplo_muts_by_b37 = {}
 haplo_muts_by_b36 = {}
@@ -514,6 +520,7 @@ def load_yfull_snp(pages):
 
     print("Lines in YFull mut DB: ", len(haplo_yfull_muts_by_name))
 
+haplo_ybrowse_info = ''
 haplo_ybrowse_muts_by_name = {}
 haplo_ybrowse_muts_by_b38 = {}
 
@@ -527,6 +534,9 @@ def load_ybrowse_snp():
                 print('Line: %d...'%ln)
             if len(line) < 2:
                 continue
+            if line.startswith('## date'):
+                global haplo_ybrowse_info
+                haplo_ybrowse_info=line[8:].strip('\n')
             if line[0] == '#':
                 continue
             tlv=line.split('\t')
@@ -643,32 +653,40 @@ def load_db():
             haplo_muts_by_b37[mut['b37']] = mut 
             haplo_muts_by_b38[mut['b38']] = mut 
 
-def save_yfull_db():
-    with open('yfull_snp.txt', 'w') as f:
-        for mut in haplo_yfull_muts_by_name:
-            print(haplo_yfull_muts_by_name[mut], file = f)
-
-def save_ybrowse_db():
-    with open('ybrowse_snp.txt', 'w') as f:
-        for mut in haplo_ybrowse_muts_by_name:
-            print(haplo_ybrowse_muts_by_name[mut], file = f)
-
-def save_db2():
-    with open('haploy_map2.txt', 'w') as f:
-        for mut in haplo_muts_list:
-            print(mut, file = f)
-
-def save_db3():
-    with open('haploy_map2.txt', 'w') as f:
-        for mut in haplo_ftdna_muts_list:
-            print(mut, file = f)
-
-def load_db2(min_tree_load_level=0):
-    with open('haploy_map2.txt', 'r') as f:
-        for line in f:
-            mut = eval(line)
+def load_db2j(min_tree_load_level=0):
+    with open('haploy_map2j.txt', 'r') as f:
+        jdata = json.load(f)
+        global haplo_ybrowse_info
+        global haplo_isogg_info
+        global haplo_muts_yfull_info
+        global ftdna_info
+        haplo_ybrowse_info = jdata['info_ybrowse']
+        haplo_isogg_info = jdata['info_isogg']
+        haplo_muts_yfull_info = jdata['info_yfull']
+        ftdna_info = jdata['info_ftdna']
+        for mut in jdata['muts']:
             if mut['l'] >= min_tree_load_level:
                 haplo_muts_list.append(mut)
+
+def save_db2j():
+    jroot={
+        'info_ybrowse': haplo_ybrowse_info,
+        'info_isogg': haplo_isogg_info,
+        'info_yfull': haplo_muts_yfull_info,
+        'info_ftdna': ftdna_info,
+        'muts': haplo_muts_list }
+    with open('haploy_map2j.txt', 'w') as f:
+        json.dump(jroot, f, indent=1);
+
+def save_db3j():
+    jroot={
+        'info_ybrowse': haplo_ybrowse_info,
+        'info_isogg': haplo_isogg_info,
+        'info_yfull': haplo_muts_yfull_info,
+        'info_ftdna': ftdna_info,
+        'muts': haplo_ftdna_muts_list }
+    with open('haploy_map2j.txt', 'w') as f:
+        json.dump(jroot, f, indent=1);
 
 def show_db2():
     for m in sorted(haplo_muts_list, key=lambda e: int(e['b37'])):
@@ -900,6 +918,20 @@ def yfull_recurse_list(ul_in, level, fileroot):
                 #print('END: ' +fname)
     return 0
 
+def yfull_get_info(soup):
+    global haplo_muts_yfull_info
+    if not haplo_muts_yfull_info:
+        soup = soup.find('table', attrs={"class": "yf-tree-note-wrapper"})
+        soup = soup.find('p', attrs={"class": "note"})
+        note = soup.contents[0]
+        note = re.sub('Haplogroup','', note)
+        note = re.sub('YTree','', note)
+        note = re.sub('\n+',' ', note)
+        note = re.sub(' +',' ', note)
+        note = note.strip()
+        print(note)
+        haplo_muts_yfull_info = note
+
 def yfull_recurse_file(group, level):
     fname = yfull_fname(group)
     try:
@@ -914,6 +946,7 @@ def yfull_recurse_file(group, level):
         soup = BeautifulSoup(f.read(), features="html.parser")
         ul = soup.find('ul', id='tree')
         yfull_recurse_list(ul, level, True)
+        yfull_get_info(soup)
 
 no_pos_counter=0
 def import_yfull_tree():
@@ -924,6 +957,7 @@ def import_yfull_tree():
     print('No pos found for %d tree nodes'%no_pos_counter)
     print('Tree database size is %d nodes'%len(haplo_muts_list))
 
+ftdna_info=''
 ftdna_by_id={}
 
 def recurse_ftdna_node(level, id):
@@ -986,6 +1020,8 @@ def import_ftdna_tree():
             n = data['allNodes'][r]
             #print(n)
             ftdna_by_id[n['haplogroupId']] = n.copy()
+        global ftdna_info
+        ftdna_info=data['publishedDate']
         skip=0
         for r in data['roots']:
             if not skip:
