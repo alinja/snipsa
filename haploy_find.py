@@ -41,6 +41,7 @@ if len(args.file) < 2:
         print("Loading DB2...")
         haploy.load_db2j(min_tree_load_level=min_tree_load_level)
         print("DB loaded!")
+        haploy.load_annotations('haploy_annodb_*.txt')
         rep = haploy.report(args.file[0], n_single, do_all=all, filt=filt, force=force, min_match_level=min_match_level)
         print(rep)
     else:

@@ -6,8 +6,10 @@ import snpload
 from bs4 import BeautifulSoup
 import urllib.request
 import json
+import glob
 
 def print_uptree(snpset, ut, do_print=True, b3x='b37'):
+    prev_gl=[]
     rep=''
     y=snpset['Y'];
     pos=0
@@ -17,11 +19,33 @@ def print_uptree(snpset, ut, do_print=True, b3x='b37'):
         txt=''
         if 'txt' in mut:
             txt=mut['txt']
+        otherg=mut['isog']
+        if mut['ftg'] != '?':
+            if mut['isog']:
+                otherg+=', '
+            otherg+=mut['ftg']
         if mut[b3x] in y:
-            rep += "%-1s%-11s%s %-30s %-32s %s\n"%(mut['tag'], mut['g'], y[mut[b3x]]['gen'], mut['raw'], mut['isog'], txt)
+            rep += "%-1s%-11s%s %-30s %-32s %s\n"%(mut['tag'], mut['g'], y[mut[b3x]]['gen'], mut['raw'], otherg, txt)
         else:
-            rep += "%-1s%-11s%s %-30s %-32s %s\n"%(mut['tag'], mut['g'], ' ', mut['raw'], mut['isog'], txt)
+            rep += "%-1s%-11s%s %-30s %-32s %s\n"%(mut['tag'], mut['g'], ' ', mut['raw'], otherg, txt)
             pass
+
+        if not mut['g'] in prev_gl:
+            if mut['g'] in annotations_by_g:
+                for anno in annotations_by_g[mut['g']]:
+                    rep += "%45s[Y] %s\n"%('',anno['txt'])
+            prev_gl.append(mut['g'])
+        if not mut['ftg'] in prev_gl:
+            if mut['ftg'] in annotations_by_g and not mut['g'] in annotations_by_g:
+                for anno in annotations_by_g[mut['ftg']]:
+                    rep += "%45s[F] %s\n"%('',anno['txt'])
+            if mut['ftg'] != '?':
+                prev_gl.append(mut['ftg'])
+        for m in mut['raw'].split('/'):
+            m2=m.replace('(H)','')
+            if m2 in annotations_by_m:
+                for anno in annotations_by_m[m2]:
+                    rep += "%45s[M] %s\n"%('',anno['txt'])
     if do_print:
         print(rep)
     return rep
@@ -522,7 +546,6 @@ def load_yfull_snp(pages):
 
 haplo_ybrowse_info = ''
 haplo_ybrowse_muts_by_name = {}
-haplo_ybrowse_muts_by_b38 = {}
 
 # Source: http://www.ybrowse.org/gbrowse2/gff/
 def load_ybrowse_snp():
@@ -568,8 +591,6 @@ def load_ybrowse_snp():
             }
             if mname not in haplo_ybrowse_muts_by_name:
                 haplo_ybrowse_muts_by_name[mname] = mut
-            if b38 not in haplo_ybrowse_muts_by_b38:
-                haplo_ybrowse_muts_by_b38[b38] = mut
     print("Lines in YBrowse snp DB: ", len(haplo_ybrowse_muts_by_name))
 
 # Convert formats with CrossMap and chain file in crossmap/
@@ -777,13 +798,8 @@ def decode_entry(e):
                     else:
                         if mut['t'] != m['t']:
                             print('FTDNA der mismatch:', e, mut['t'], m['t'], mut, m)
-                #if not 'isog' in m:
-                #    m['isog']=''
-                #else:
-                if 'isog' in m:
-                    if m['isog']:
-                        m['isog']+=', '
-                    m['isog']+=mut['g']+''
+                if 'b38' in m:
+                    m['ftg']=mut['g']
     return m
 
 def yfull_fname(group):
@@ -894,6 +910,14 @@ def yfull_recurse_list(ul_in, level, fileroot):
                 #muts['f']=dec['f']
                 mutse['t']=dec['t']
                 mutse['isog']=dec['isog']
+                mutse['ftg']='?'
+                if 'ftg' in dec:
+                    mutse['ftg']=dec['ftg']
+                #discard far matches
+                if not mutse['isog'].startswith(mutse['g'][0]):
+                    mutse['isog']=''
+                if not mutse['ftg'].startswith(mutse['g'][0]):
+                    mutse['ftg']='?'
                 mutse['b36']=dec['b36']
                 mutse['b37']=dec['b37']
                 mutse['b38']=dec['b38']
@@ -1030,5 +1054,23 @@ def import_ftdna_tree():
                 skip=1
     print('FTDNA Tree database size is %d nodes'%len(haplo_ftdna_muts_list))
 
+annotations_by_g = {}
+annotations_by_m = {}
+def load_annotations(fname):
+    files = glob.glob(fname)
+    for fn in files:
+        with open(fn, 'r') as f:
+            print('Loading annotation file %s'%fn)
+            jdata = json.load(f)
+            for anno in jdata['annotation']:
+                #print(anno)
+                if 'g' in anno and anno['g']:
+                    if not anno['g'] in annotations_by_g:
+                        annotations_by_g[anno['g']] = []
+                    annotations_by_g[anno['g']].append(anno)
+                if 'm' in anno and anno['m']:
+                    if not anno['m'] in annotations_by_m:
+                        annotations_by_m[anno['m']] = []
+                    annotations_by_m[anno['m']].append(anno)
 
 

@@ -7,7 +7,7 @@ from tkinter import scrolledtext
 import haplomt
 import haploy
 
-bam_support=0
+bam_support=1
 
 if bam_support:
     import bamload
@@ -15,15 +15,18 @@ if bam_support:
 
 def handle_bam_select():
     bamname = tkinter.filedialog.askopenfile().name
-    bamload.get_build(bamname)
+    in_build = bamload.get_build(bamname)
+    bamload.setup_conv(in_build)
     snpset = bamload.full_convert(bamname)
     snpload.save(bamname+'.snp.txt', snpset, 38)
-    message='SNP file written to ' + bamname+'.snp.txt'
+    snpname = bamname+'.snp.txt'
+    message = 'SNP file written to ' + snpname
     scr.config(state=tk.NORMAL)
     scr.delete('1.0', tk.END)
     scr.insert('1.0', message)
     scr.config(state=tk.DISABLED)
     scr.see("end")
+    fnamevar.set(snpname)
 
 
 def handle_file_select():
@@ -57,6 +60,7 @@ def handle_findy():
     if not dby_loaded:
         dby_loaded = 1
         haploy.load_db2j()
+        haploy.load_annotations('haploy_annodb_*.txt')
     do_uptree = report_snps.get()
     do_all = report_all.get()
     force = pathvar.get()

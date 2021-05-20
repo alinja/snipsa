@@ -1,0 +1,17 @@
+{
+ "info": "Test file",
+ "annotation": [
+  {"m": "M2019", "txt": "Yakuts"},
+  {"m": "Y13850", "txt": "Ugric"},
+  {"m": "Y10932", "txt": "Rurikids"},
+  {"m": "L550", "txt": "Scandic/Baltic"},
+  {"m": "Z1933", "txt": "Savo/Karjala"},
+  {"m": "CTS9976", "txt": "Finns"},
+  {"m": "VL62", "txt": "Karjala"},
+  {"m": "CTS8565", "txt": "Savo"},
+  {"m": "M7414", "txt": "Kärsä-Laitinen"},
+  {"m": "VL29", "txt": "North European"},
+  {"m": "PH521", "txt": "Lapland"},
+  {"m": "L1022", "txt": "Häme/Länsi-Suomi"}
+ ]
+}
