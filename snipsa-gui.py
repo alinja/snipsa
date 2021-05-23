@@ -44,10 +44,16 @@ def handle_findmt():
     do_uptree = report_snps.get()
     do_all = report_all.get()
     force = pathvar.get()
+    vcf_sample = vcfvar.get()
+    buildstr = buildvar.get()
+    force_build=0
+    if  buildstr == 'Build36': force_build = 36
+    if  buildstr == 'Build37': force_build = 37
+    if  buildstr == 'Build38': force_build = 38
     fname = fnamevar.get()
     print("Reporting file: "+fname)
     num = int(numbox.get())
-    rep = haplomt.report(fname, num, do_uptree=do_uptree, do_extra=do_uptree, do_all=do_all, filt=force, force=force)
+    rep = haplomt.report(fname, num, do_uptree=do_uptree, do_extra=do_uptree, do_all=do_all, filt=force, force=force, vcf_sample=vcf_sample, force_build=force_build)
     print("Done")
     scr.config(state=tk.NORMAL)
     scr.delete('1.0', tk.END)
@@ -64,10 +70,16 @@ def handle_findy():
     do_uptree = report_snps.get()
     do_all = report_all.get()
     force = pathvar.get()
+    vcf_sample = vcfvar.get()
+    buildstr = buildvar.get()
+    force_build=0
+    if  buildstr == 'Build36': force_build = 36
+    if  buildstr == 'Build37': force_build = 37
+    if  buildstr == 'Build38': force_build = 38
     fname = fnamevar.get()
     print("Reporting file: "+fname)
     num = int(numbox.get())
-    rep = haploy.report(fname, num, do_uptree=do_uptree, do_extra=do_uptree, do_all=do_all, filt=force, force=force)
+    rep = haploy.report(fname, num, do_uptree=do_uptree, do_extra=do_uptree, do_all=do_all, filt=force, force=force, vcf_sample=vcf_sample, force_build=force_build)
     print("Done")
     scr.config(state=tk.NORMAL)
     scr.delete('1.0', tk.END)
@@ -86,12 +98,25 @@ hdrframe.pack(fill='x')
 # File
 fframe=tk.Frame(hdrframe)
 fframe.pack(fill='both')
+if bam_support:
+    cbutton3 = tk.Button(fframe, text="Import BAM", command=handle_bam_select)
+    cbutton3.pack(side=tk.LEFT)
 button = tk.Button(fframe, text="Choose file", command=handle_file_select)
 button.pack(side=tk.LEFT)
 fnamevar = tk.StringVar()
 fnamevar.set("No file selected")
 fnamelabel=tk.Label(fframe, textvariable=fnamevar,  anchor='w')
-fnamelabel.pack(side=tk.RIGHT, fill='both', expand=True)
+fnamelabel.pack(side=tk.LEFT, fill='both', expand=True)
+vcflabel=tk.Label(fframe, text='VCF sample:', anchor='w')
+vcflabel.pack(side=tk.LEFT, fill='both')
+vcfvar = tk.StringVar()
+vcfbox = tk.Entry(fframe, textvariable=vcfvar,width=10)
+vcfbox.pack(side=tk.LEFT)
+buildvar = tk.StringVar()
+buildchoices = {'Auto', 'Build36', 'Build37', 'Build38'}
+buildvar.set('Auto')
+builddropdown = tk.OptionMenu(fframe, buildvar, *buildchoices)
+builddropdown.pack(side=tk.LEFT)
 
 # Settings
 sframe=tk.Frame(hdrframe)
@@ -123,9 +148,6 @@ cbutton1 = tk.Button(cframe, text="Find MT", command=handle_findmt)
 cbutton1.pack(side=tk.LEFT, fill='x', expand=True)
 cbutton2 = tk.Button(cframe, text="Find Y", command=handle_findy)
 cbutton2.pack(side=tk.LEFT, fill='x', expand=True)
-if bam_support:
-    cbutton3 = tk.Button(cframe, text="Import BAM", command=handle_bam_select)
-    cbutton3.pack(side=tk.LEFT, fill='x', expand=True)
 
 # Result area
 scr=scrolledtext.ScrolledText(window, wrap=tk.WORD)  

@@ -34,6 +34,13 @@ CrossMap (`pip3 install CrossMap`), conversion chain file (`crossmap/GRCh38_to_N
 the ISOGG spreadsheet in csv format (`'SNP Index - Human.csv'`). Outputs a `haploy_map.txt`
 file which is used by haploy_find.py. See haploy.py for details.
 
+## haploy_anno_import.py
+
+This example script is used to import your own annotations that can be attached to the reported tree nodes. As an example the script will 
+import YFull person IDs, and also some selected FTDNA project files. Open project chart tables in a browser, select page
+size so that everything fits in one page, and edit the corresponding lines at the end of the script. Snipsa will load any 
+files starting with haploy_annodb. An example file is included.
+
 ## haplomt_find.py
 
 This small tool reads a raw SNP data file and lists MT chromosome haplogroup information. You must first initialize the mutation

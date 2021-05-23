@@ -133,9 +133,9 @@ def path_str(ut, n):
 
     return rep
 
-def report(fname, n, do_uptree=True, do_extra=True, do_all=False, filt='', force='', min_match_level=0):
+def report(fname, n, do_uptree=True, do_extra=True, do_all=False, filt='', force='', min_match_level=0, vcf_sample='', force_build=0):
     rep=''
-    snpset, meta = snpload.load(fname, ['Y'])
+    snpset, meta = snpload.load(fname, ['Y'], vcf_sample=vcf_sample, force_build=force_build)
     if 'Y' not in snpset:
         return "No Y data found\n"
 
@@ -714,7 +714,7 @@ def show_db2():
         print(m)
 
 blacklist_etc='M8990' #str etc
-blacklist_yb='Z1908  Y13952 Z6171 PF1401 M11813 YSC0001289 BY2821 M11836 M3745 M11838 M11843'
+blacklist_yb='M3745'
 blacklist_yf='Z8834 Z7451 YP1757 YP2129 YP1822 YP1795 YP2228 YP1809 YP2229 YP1948 YP2226 YP1827 L508'
 blacklist_yf+=' Y125394 Y125393 Y125392 Y125391 Y125390 Y125389 Y125396 Y125397 Y125408 [report-spacer] V1896 PAGE65.1 Y2363 PF3515 PF3512 PF3507 PF3596 Z6023 M547 A3073 Z1716 PF5827 PF1534 PF6011 PF2634 PF2635'
 blacklist_rootambi='BY229589 Z2533 DFZ77 M11801 FT227770 Y3946 Y125419 FT227767 Y1578 CTS12490 FT227774 YP1740 Y125394 Y125393 Y125392 Y125391 Y125390' #TODO

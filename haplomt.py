@@ -64,9 +64,9 @@ def print_data(do_print=True):
     return rep
 
 
-def report(fname, n, do_uptree=True, do_extra=True, do_all=False, filt='', force=''):
+def report(fname, n, do_uptree=True, do_extra=True, do_all=False, filt='', force='', vcf_sample='', force_build=0):
     rep=''
-    snpset, meta = snpload.load(fname, ['MT'])
+    snpset, meta = snpload.load(fname, ['MT'], vcf_sample=vcf_sample, force_build=force_build)
     if 'MT' not in snpset:
         return "No MT data found\n"
 

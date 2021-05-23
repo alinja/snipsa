@@ -14,12 +14,16 @@ all=False
 min_match_level=0
 min_tree_load_level=0
 new_yfind=1
+force_build=0
+vcf_sample=''
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-s', '--single', help='Analyse a path for single group')
 parser.add_argument('-a', '--all', action='store_true', help='Show listing of all found mutations')
 parser.add_argument('-n', '--num', help='Show num best matches')
 parser.add_argument('-q', '--quick', help='Quick mode')
+parser.add_argument('-v', '--vcf-sample', help='VCF sample select (regexp)')
+parser.add_argument('-b', '--build', help='Force build36/37&38 input')
 parser.add_argument('file', nargs='+')
 
 args = parser.parse_args()
@@ -34,6 +38,10 @@ if args.all:
 if args.quick:
     min_match_level=int(args.quick)
     min_tree_load_level=int(args.quick)
+if args.vcf_sample:
+    vcf_sample = args.vcf_sample
+if args.build:
+    force_build = int(args.build)
 
 if len(args.file) < 2:
     
@@ -42,7 +50,7 @@ if len(args.file) < 2:
         haploy.load_db2j(min_tree_load_level=min_tree_load_level)
         print("DB loaded!")
         haploy.load_annotations('haploy_annodb_*.txt')
-        rep = haploy.report(args.file[0], n_single, do_all=all, filt=filt, force=force, min_match_level=min_match_level)
+        rep = haploy.report(args.file[0], n_single, do_all=all, filt=filt, force=force, min_match_level=min_match_level, vcf_sample=vcf_sample, force_build=force_build)
         print(rep)
     else:
         # keep old one available
@@ -69,7 +77,8 @@ else:
         haploy.load_db2j(min_tree_load_level=min_tree_load_level)
         print("DB loaded!")
         for fname in args.file[1:]:
-            snpset, meta = snpload.load(fname, ['Y'])
+            #TODO: loop over vcf samples
+            snpset, meta = snpload.load(fname, ['Y'], vcf_sample=vcf_sample, force_build=force_build)
 
             if 'Y' not in snpset:
                 print('%s: no Y data'%fname)

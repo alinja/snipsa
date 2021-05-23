@@ -6,19 +6,28 @@ import shutil
 
 #fname: filename
 #crs: chromosomes to read
-def load(fname, crs=[]):
+def load(fname, crs=[], vcf_sample='', force_build=0):
     snpset = {}
     meta = {}
+    vcf_idx = 0
     try:
         tmpfile = preprocess_file(fname)
         (build, fmt) = detect_file_format(tmpfile)
+        if fmt == 'vcf':
+            idxs = get_vcf_sample_idx(tmpfile, vcf_sample)
+            #print(idxs)
+            if len(idxs) > 0:
+                vcf_idx = idxs[0]
+            print('VCF sample idx:', vcf_idx)
     except:
         print("FORMAT AUTODETECT FAILED!!!!!")
         meta['build'] = 0
         meta['format'] = ''
         meta['total'] = 0
         return (snpset, meta)
-    
+
+    if force_build:
+        build = force_build
     meta['build'] = build
     meta['format'] = fmt
     meta['total'] = 0
@@ -31,6 +40,8 @@ def load(fname, crs=[]):
         importer = import_line_ftdna
     elif fmt == 'myheritage':
         importer = import_line_ftdna #same
+    elif fmt == 'vcf':
+        importer = import_line_vcf
     else:
         print("Undetected format: build%d, %s"%(build, fmt))
         meta['total'] = 0
@@ -41,8 +52,8 @@ def load(fname, crs=[]):
         with open(tmpfile) as f:
             for line in f:
                 try:
-                    (snp, pos, cr, gen) = importer(line, build)
-                except:
+                    (snp, pos, cr, gen) = importer(line, build, vcf_idx)
+                except RuntimeError:
                     continue
                 
                 if gen[0] == "-":
@@ -79,14 +90,14 @@ def load(fname, crs=[]):
     meta['total'] = n_total
     return (snpset, meta)
 
-def import_line_23andme(line, build):
+def import_line_23andme(line, build, idx):
     if len(line) < 7:
-        raise Exception()
+        raise RuntimeError()
     if line.startswith('#'):
-        raise Exception()
+        raise RuntimeError()
     sline = line.split()
     if len(sline) < 4:
-        raise Exception()
+        raise RuntimeError()
     cr = sline[1];
     pos = sline[2];
     gen = sline[3];
@@ -104,16 +115,16 @@ def import_line_23andme(line, build):
         
     return (snp, pos, cr, gen)
 
-def import_line_ancestry(line, build):
+def import_line_ancestry(line, build, idx):
     if 'allele1' in line and 'allele2' in line:
-        raise Exception()
+        raise RuntimeError()
     if len(line) < 7:
-        raise Exception()
+        raise RuntimeError()
     if line.startswith('#'):
-        raise Exception()
+        raise RuntimeError()
     sline = line.split()
     if len(sline) < 4:
-        raise Exception()
+        raise RuntimeError()
     cr = sline[1];
     if cr == '23':
         cr = 'X'
@@ -140,16 +151,16 @@ def import_line_ancestry(line, build):
         
     return (snp, pos, cr, gen)
 
-def import_line_ftdna(line, build):
+def import_line_ftdna(line, build, idx):
     if len(line) < 7:
-        raise Exception()
+        raise RuntimeError()
     if line.startswith('#'):
-        raise Exception()
+        raise RuntimeError()
     if line.startswith('RSID'):
-        raise Exception()
+        raise RuntimeError()
     sline = line.split(',')
     if len(sline) < 4:
-        raise Exception()
+        raise RuntimeError()
     cr = sline[1].strip('"');
     pos = sline[2].strip('"');
     gen = sline[3].strip().strip('"');
@@ -167,6 +178,82 @@ def import_line_ftdna(line, build):
         
     return (snp, pos, cr, gen)
 
+def import_line_vcf(line, build, idx):
+    if len(line) < 7:
+        raise RuntimeError()
+    if line.startswith('#'):
+        raise RuntimeError()
+    sline = line.split()
+    if len(sline) < 4:
+        raise RuntimeError()
+    cr = sline[0];
+    if cr == 'chrY':
+        cr = 'Y'
+    elif cr == 'chrMT':
+        cr = 'MT'
+    elif cr == 'M':
+        cr = 'MT'
+    elif cr == 'chrM':
+        cr = 'MT'
+    else:
+        cr.replace('chr','')
+
+    pos = sline[1]
+    ref = sline[3]
+    alt = sline[4]
+    alls = [ref]
+    alls+=alt.split(',')
+
+    #skip indel
+    if len(ref) > 1 or len(alt) > 1:
+        raise RuntimeError()
+
+    #GT index from format string
+    form = sline[8]
+    gti=0
+    for i,gtstr in enumerate(form.split(':')):
+        if gtstr == 'GT':
+            gti=i
+
+    s = sline[9+idx].split(':')
+
+    #print(pos, alls, gti, s)
+    if s[gti][0] == '.':
+        raise RuntimeError()
+    g = alls[int(s[gti][0])]
+
+    #print(pos, alls, g)
+    gen = g+g;
+
+    snp = {'id': sline[2],
+        'cr': cr,
+        'gen': gen }
+
+    if build == 36:
+        snp['b36'] = pos
+    elif build == 37:
+        snp['b37'] = pos
+    elif build == 38:
+        snp['b38'] = pos
+
+    return (snp, pos, cr, gen)
+
+def get_vcf_sample_idx(fname, sname):
+    lc=0
+    idxs=[]
+    with open(fname) as f:
+        for line in f:
+            #print(line)
+            if line.startswith('#CHROM'):
+                for i, sam in enumerate(line.split('\t')[9:]):
+                    if re.search(sname, sam):
+                        idxs.append(i)
+                break
+            lc+=1
+            if lc > 10000:
+                break
+    return idxs
+
 def detect_file_format(fname):
     lc=0
     build=0
@@ -174,14 +261,14 @@ def detect_file_format(fname):
     with open(fname) as f:
         for line in f:
             lc += 1
-            if lc > 3000:
+            if lc > 4000:
                 break
             if fmt != '' and build != 0:
                 break
             if line.startswith('#'):
-                if 'build ' in line:
+                if fmt != 'vcf' and 'build ' in line:
                     build = int(re.findall(r'build \d+', line)[0].split()[1])
-                if 'Build: ' in line:
+                if fmt != 'vcf' and 'Build: ' in line:
                     build = int(re.findall(r'Build: \d+', line)[0].split()[1])
                 if "23andMe" in line:
                     fmt = '23andme'
@@ -191,7 +278,12 @@ def detect_file_format(fname):
                     fmt = 'myheritage'
                 if "##fileformat=VCF" in line:
                     fmt = 'vcf'
-                    return (build, fmt)
+                if "##reference" in line:
+                    #hacky autodetect may work for many files
+                    if '37' in line:
+                        build = 37
+                    if '38' in line:
+                        build = 38
                 continue
             if lc == 1 and line.startswith('RSID'):
                      fmt = 'ftdna'
