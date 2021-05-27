@@ -245,9 +245,12 @@ def get_vcf_sample_idx(fname, sname):
         for line in f:
             #print(line)
             if line.startswith('#CHROM'):
+                samples=''
                 for i, sam in enumerate(line.split('\t')[9:]):
                     if re.search(sname, sam):
                         idxs.append(i)
+                    samples+=sam+' '
+                print('VCF samples:', samples)
                 break
             lc+=1
             if lc > 10000:

@@ -7,7 +7,7 @@ import argparse
 
 #configure how many candidates are shown:
 n_single = 1
-n_multi = 5
+n_multi = 1
 force=''
 filt=''
 all=False

@@ -6,8 +6,44 @@ from bs4 import BeautifulSoup
 import urllib.request
 import json
 import glob
+import csv
 
 
+#all-ancient-dna-2-07-06.csv (CC-BY indo-european.eu Carlos Quiles, Jean Manco)
+#csv: https://drive.google.com/drive/folders/1FNQNLQs93tmsX5_G728zE4DTIS0WUsXR
+#iconv -f windows-1252 -t utf-8 -c all-ancient-dna-2-07-06.csv >all-ancient-dna-2-07-06b.csv
+def import_ancient():
+    fname='all-ancient-dna-2-07-06b.csv'
+    #annos['info']=fname+' (CC-BY indo-european.eu Carlos Quiles, Jean Manco)'
+    with open(fname) as f:
+        csv_reader=csv.reader(f, delimiter=',')
+        lc = 0
+        for row in csv_reader:
+            #print(row)
+            if lc == 0:
+                lc += 1
+            else:
+                id=row[0]
+                mt=row[11].strip('/').split('/')[-1]
+                y=row[33].strip('/').split('/')[-1].strip('*')
+                fty=row[35].strip('/').split('/')[-1]
+                src=row[44]
+                date=row[46].strip()
+                bc1=row[48]
+                bc2=row[49]
+                age=row[50]
+                simp_cult=row[51].strip()
+                cult=row[52].strip()
+                loc=row[54].strip()
+                cou=row[56].strip()
+                #print(id, mt, y, src, date, bc1, bc2, age, simp_cult, cult, loc, cou)
+                txt='ANCIENT %s (%s): %s, %s %s, %s %s'%(id, src, date, simp_cult, cult, loc, cou)
+                print(txt)
+                anno = {
+                    "g": y,
+                    "txt": txt
+                }
+                annos.append(anno)
 
 
 def yfull_fname(group):
@@ -100,6 +136,12 @@ def yfull_is_tree_quirk(group_name, fileroot):
         return True
     if group_name=='R-Z2118':
         return True
+    if group_name=='R-M335':
+        return True
+    if group_name=='K-Y28299':
+        return True
+    if group_name=='H':
+        return True
     return False
 
 def yfull_recurse_list(ul_in, level, fileroot):
@@ -115,13 +157,22 @@ def yfull_recurse_list(ul_in, level, fileroot):
             muts['g']=g.text
             txts = yfull_parse_person(li)
             grp=g.text.strip('*')
+            age=yfull_parse_age(li)
+            if age:
+                print(grp, age)
+                anno = {
+                    "g": grp,
+                    "txt": 'YF-AGE: %s'%(age)
+                }
+                annos.append(anno)
             for txt in txts:
                 print(grp, txt)
                 anno = {
                     "g": grp,
-                    "txt": 'YFULL: %s'%(txt)
+                    "txt": 'YF %s'%(txt)
                 }
                 annos.append(anno)
+
         l=li.find('a', href=True, recursive=False)
         if l:
             muts['link']=l['href']
@@ -171,8 +222,6 @@ def import_ftdna_chart(fname, info=''):
         print('Importing file: ' +fname)
         soup = BeautifulSoup(f.read(), features="html.parser")
         
-        #rows = soup.find('div', id='MainContent_color1_GridView1').find('table').find_all("tr")
-        #rows = soup.find('table').find_all("tr")
         rows = soup.find('div', {"id" : re.compile('MainContent.*')}).find('table').find_all("tr")
         
         kiti = -1
@@ -210,19 +259,23 @@ def import_ftdna_chart(fname, info=''):
                 print(kit, pat, gr)
                 anno = {
                     "g": gr,
-                    "txt": 'FTDNA: %s %s %s'%(kit, pat, info)
+                    "txt": 'FT %s %s %s'%(kit, pat, info)
                 }
                 annos.append(anno)
 
 def save_anno(fname):
     jroot={
-        'info': 'haploy_anno_iport.py',
+        'info': 'haploy_anno_import.py',
         'annotation': annos }
     with open(fname, 'w') as f:
         json.dump(jroot, f, indent=1);
 
 
 # Example annotations - it probably doesn't make sense for everyone to import every project
+
+annos=[]
+import_ancient()
+save_anno('haploy_annodb_ancientdna.txt')
 
 annos=[]
 import_yfull_tree('A00')
@@ -232,10 +285,17 @@ import_yfull_tree('A0-T')
 save_anno('haploy_annodb_yfull.txt')
 
 annos=[]
+#TODO: de-duplicate based on ID?
+#Go to project DNA Results->Classic Chart (e.g. https://www.familytreedna.com/public/Finland?iframe=yresults), set Page Size to a big number, load the new page and Save as
 import_ftdna_chart('ftdna/FamilyTreeDNA - Estonia.htm', '[Estonia]')
 import_ftdna_chart('ftdna/FamilyTreeDNA - Saami Project.htm', '[Saami]')
 import_ftdna_chart('ftdna/FamilyTreeDNA - I1 Suomi Finland & N-CTS8565 -projekti.htm', '[I1 Suomi]')
 import_ftdna_chart('ftdna/FamilyTreeDNA - Finland DNA Project.htm', '[FinlandDNA]')
 import_ftdna_chart('ftdna/FamilyTreeDNA - RussiaDNA Project.htm', '[RussiaDNA]')
 import_ftdna_chart('ftdna/FamilyTreeDNA - R1a1a and Subclades Y-DNA Project.htm', '[R1a1a]')
+import_ftdna_chart('ftdna/FamilyTreeDNA - N1c1 Haplogroup Y-DNA Project.htm', '[N1c1]')
+import_ftdna_chart('ftdna/FamilyTreeDNA - Det skogfinske DNA-prosjektet - Forest Finn DNA project.htm', '[Skogfinske]')
+import_ftdna_chart('ftdna/FamilyTreeDNA - Turun Seudun Sukututkijat Dna.htm', '[Turun Seudun]')
+import_ftdna_chart('ftdna/FamilyTreeDNA - Karjala DNA -projekti.htm', '[Karjala]')
+import_ftdna_chart('ftdna/FamilyTreeDNA - Viitasaari (Savo-Tawastian) DNA project.htm', '[Viitasaari]')
 save_anno('haploy_annodb_ftdnatest.txt')

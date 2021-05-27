@@ -33,19 +33,19 @@ def print_uptree(snpset, ut, do_print=True, b3x='b37'):
         if not mut['g'] in prev_gl:
             if mut['g'] in annotations_by_g:
                 for anno in annotations_by_g[mut['g']]:
-                    rep += "%45s[Y] %s\n"%('',anno['txt'])
+                    rep += "%15s* %s\n"%('',anno['txt'])
             prev_gl.append(mut['g'])
         if not mut['ftg'] in prev_gl:
             if mut['ftg'] in annotations_by_g and not mut['g'] in annotations_by_g:
                 for anno in annotations_by_g[mut['ftg']]:
-                    rep += "%45s[F] %s\n"%('',anno['txt'])
+                    rep += "%15s* %s\n"%('',anno['txt'])
             if mut['ftg'] != '?':
                 prev_gl.append(mut['ftg'])
         for m in mut['raw'].split('/'):
             m2=m.replace('(H)','')
             if m2 in annotations_by_m:
                 for anno in annotations_by_m[m2]:
-                    rep += "%45s[M] %s\n"%('',anno['txt'])
+                    rep += "%15s* %s\n"%('',anno['txt'])
     if do_print:
         print(rep)
     return rep
@@ -90,10 +90,11 @@ def print_data(do_print=True):
     rep=''
 
     rep += 'Based on data from:\n'
-    rep += 'yfull.com %s [CC BY]\n'%haplo_muts_yfull_info
-    rep += 'isogg.org/tree Y-DNA Tree %s [CC BY-NC-SA 3.0]\n'%haplo_isogg_info
-    rep += 'ybrowse.org %s [CC BY-NC-SA Thomas Krahn]\n'%haplo_ybrowse_info
-    rep += 'ftdna.com %s\n'%ftdna_info
+    rep += '* yfull.com %s [CC BY]\n'%haplo_muts_yfull_info
+    rep += '* isogg.org/tree Y-DNA Tree %s [CC BY-NC-SA 3.0]\n'%haplo_isogg_info
+    rep += '* ybrowse.org %s [CC BY-NC-SA Thomas Krahn]\n'%haplo_ybrowse_info
+    rep += '* ftdna.com %s\n'%ftdna_info
+    rep += '* all-ancient-dna-2-07-06.csv [CC-BY indo-european.eu Carlos Quiles, Jean Manco %s]\n'%''
 
     if do_print:
         print(rep)
@@ -846,12 +847,19 @@ def yfull_parse_age(li):
         s+=agespan.text
     return s
 
+#these have subtree in their url even when they have persons listed
 def yfull_is_tree_quirk(group_name, fileroot):
     if fileroot:
         return False
     if group_name=='R-P312':
         return True
     if group_name=='R-Z2118':
+        return True
+    if group_name=='R-M335':
+        return True
+    if group_name=='K-Y28299':
+        return True
+    if group_name=='H':
         return True
     return False
 
@@ -922,8 +930,8 @@ def yfull_recurse_list(ul_in, level, fileroot):
                 mutse['b37']=dec['b37']
                 mutse['b38']=dec['b38']
                 mutse['raw']=m
-                if age:
-                    mutse['txt']=age
+                #if age:
+                #    mutse['txt']=age
                 #print(mutse)
                 haplo_muts_list.append(mutse)
 
@@ -1059,7 +1067,7 @@ annotations_by_m = {}
 def load_annotations(fname):
     files = glob.glob(fname)
     for fn in files:
-        with open(fn, 'r') as f:
+        with open(fn, 'r', encoding='utf-8') as f:
             print('Loading annotation file %s'%fn)
             jdata = json.load(f)
             for anno in jdata['annotation']:

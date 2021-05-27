@@ -14,7 +14,11 @@ if bam_support:
     import snpload
 
 def handle_bam_select():
-    bamname = tkinter.filedialog.askopenfile().name
+    f = tkinter.filedialog.askopenfile()
+    if f:
+        bamname = f.name
+    else:
+        return
     in_build = bamload.get_build(bamname)
     bamload.setup_conv(in_build)
     snpset = bamload.full_convert(bamname)
@@ -30,7 +34,11 @@ def handle_bam_select():
 
 
 def handle_file_select():
-    fname = tkinter.filedialog.askopenfile().name
+    f = tkinter.filedialog.askopenfile()
+    if f:
+        fname = f.name
+    else:
+        return
     fnamevar.set(fname)
 
 dbmt_loaded = 0
@@ -44,7 +52,7 @@ def handle_findmt():
     do_uptree = report_snps.get()
     do_all = report_all.get()
     force = pathvar.get()
-    vcf_sample = vcfvar.get()
+    vcf_sample = vcfvar.get().strip()
     buildstr = buildvar.get()
     force_build=0
     if  buildstr == 'Build36': force_build = 36
@@ -70,7 +78,7 @@ def handle_findy():
     do_uptree = report_snps.get()
     do_all = report_all.get()
     force = pathvar.get()
-    vcf_sample = vcfvar.get()
+    vcf_sample = vcfvar.get().strip()
     buildstr = buildvar.get()
     force_build=0
     if  buildstr == 'Build36': force_build = 36

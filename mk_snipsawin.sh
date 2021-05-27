@@ -47,7 +47,7 @@ cp \
 
 #DB licenses included in implementation
 #TODO: FTDNA
-cp haplomt_map.txt haploy_map2j.txt haploy_annodb_example.txt haploy_annodb_yfull.txt $SNIPSAWIN_DIR/snipsa/
+cp haplomt_map.txt haploy_map2j.txt haploy_annodb_example.txt haploy_annodb_yfull.txt haploy_annodb_ancientdna.txt $SNIPSAWIN_DIR/snipsa/
 
 # Ybrowse (CC BY-NC-SA 3.0)
 # https://isogg.org/wiki/ISOGG_Wiki:Terms_of_Use
