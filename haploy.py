@@ -36,7 +36,7 @@ def print_uptree(snpset, ut, do_print=True, b3x='b37'):
                     rep += "%15s* %s\n"%('',anno['txt'])
             prev_gl.append(mut['g'])
         if not mut['ftg'] in prev_gl:
-            if mut['ftg'] in annotations_by_g and not mut['g'] in annotations_by_g:
+            if mut['ftg'] in annotations_by_g:
                 for anno in annotations_by_g[mut['ftg']]:
                     rep += "%15s* %s\n"%('',anno['txt'])
             if mut['ftg'] != '?':
@@ -62,6 +62,26 @@ def print_extras(snpset, bt, do_print=True, b3x='b37'):
         #outs += '%8s %s %s\n'%(e[b3x], e['t'], e['raw'])
         q=e['raw']
     rep += 'Extra: '+outs+'\n'
+
+    if do_print:
+        print(rep)
+    return rep
+
+def print_extras2(snpset, bt, do_print=True, b3x='b37'):
+    rep=''
+    last=''
+    out=[]
+    outs=''
+    sbt=sorted(bt['extras2'].keys(), key=lambda x: int(x))
+    for ek in sbt:
+        e=bt['extras2'][ek]
+        #print(e)
+        out.append(e['n'])
+        #outs += e['n'] + ' '
+        outs += '%8s %s %s\n'%(e[b3x], e['t'], e['n'])
+        q=e['n']
+    rep += 'Extra2: '+outs+'\n'
+
     if do_print:
         print(rep)
     return rep
@@ -159,11 +179,13 @@ def report(fname, n, do_uptree=True, do_extra=True, do_all=False, filt='', force
             rep += print_uptree(snpset, bt['ut'], False, b3x)
 
         leaf_mut = bt['ut'][len(bt['ut'])-1]
-        rep += "Result (%.1f%% %d -%d +%d): %-8s\n"%(bt['score'], bt['tot'], bt['neg'], len(bt['extras']), leaf_mut['g'])
+        rep += "Result (%.1f%% %d -%d +%d): %-8s\n"%(bt['score'], bt['tot'], bt['neg'], bt['nextras'], leaf_mut['g'])
         rep += "%s\n"%(path_str(bt['ut'], 20))
 
         if do_extra:
             rep += print_extras(snpset, bt, False, b3x)
+            if bt['extras2']:
+                rep += print_extras2(snpset, bt, False, b3x)
 
         rep += print_links(leaf_mut['g'], False)
     return rep
@@ -257,6 +279,13 @@ def yfind2(snpset, nbest=5, filt='', force='', b3x='b37', min_match_level=0):
         uptree = yfind_uptree(snpset, force)
         uptrees.append(uptree)
 
+    extras_all2 = {}
+    for mut in haplo_allmuts_list:
+        pos = mut[b3x]
+        if pos in mt:
+            if mt[pos]['gen'] == mut['t']:
+                extras_all2[pos]=mut
+
     #find the uptree route that is most consistent
     #random mutations can have many negative matches above them until the path reaches the common
     #common segment with the correct ones
@@ -329,6 +358,12 @@ def yfind2(snpset, nbest=5, filt='', force='', b3x='b37', min_match_level=0):
                 de_duplicate.append(e)
                 last = e['raw']
         extras = de_duplicate
+
+        extras2=extras_all2.copy()
+        for mut in ut_copy:
+            if mut[b3x] in extras2 and mut['t'] == extras2[mut[b3x]]['t']:
+                del extras2[mut[b3x]]
+
         nextras = len(extras)
 
         #extract unique all mutations
@@ -347,7 +382,9 @@ def yfind2(snpset, nbest=5, filt='', force='', b3x='b37', min_match_level=0):
         bt={
             'ut': ut_copy,
             'score': score,
+            'nextras': nextras,
             'extras': extras,
+            'extras2': extras2,
             'all': all_mutations,
             'pos': pos,
             'neg': neg,
@@ -421,6 +458,7 @@ haplo_muts_by_name = {}
 haplo_muts_list = []
 haplo_ftdna_muts_list = []
 haplo_ftdna_muts_by_name = {}
+haplo_allmuts_list = []
 
 #Imports database from ISOGG spreadsheet
 def load_snp():
@@ -710,6 +748,34 @@ def save_db3j():
     with open('haploy_map2j.txt', 'w') as f:
         json.dump(jroot, f, indent=1);
 
+#TODO: results in excessive extras - errors in database or back mutations needing proper handling?
+def save_alldbj():
+    allmuts=[]
+    for mutkey in haplo_ybrowse_muts_by_name:
+        mut = haplo_ybrowse_muts_by_name[mutkey]
+    #for mutkey in haplo_muts_by_name:
+    #    mut = haplo_muts_by_name[mutkey]
+        if is_unreliable_b38(int(mut['b38'])):
+            continue
+        if is_blacklisted_name(mutkey):
+            continue
+        allmut={
+            'n': mutkey,
+            'b38': mut['b38'],
+            't': mut['p'] }
+        allmuts.append(allmut)
+    jroot={
+        'info': 'todo',
+        'muts': allmuts }
+    with open('haploy_alldbj.txt', 'w') as f:
+        json.dump(jroot, f, indent=1);
+
+def load_alldbj():
+    with open('haploy_alldbj.txt', 'r') as f:
+        jdata = json.load(f)
+        for mut in jdata['muts']:
+            haplo_allmuts_list.append(mut)
+
 def show_db2():
     for m in sorted(haplo_muts_list, key=lambda e: int(e['b37'])):
         print(m)
@@ -718,6 +784,7 @@ blacklist_etc='M8990' #str etc
 blacklist_yb='M3745'
 blacklist_yf='Z8834 Z7451 YP1757 YP2129 YP1822 YP1795 YP2228 YP1809 YP2229 YP1948 YP2226 YP1827 L508'
 blacklist_yf+=' Y125394 Y125393 Y125392 Y125391 Y125390 Y125389 Y125396 Y125397 Y125408 [report-spacer] V1896 PAGE65.1 Y2363 PF3515 PF3512 PF3507 PF3596 Z6023 M547 A3073 Z1716 PF5827 PF1534 PF6011 PF2634 PF2635'
+blacklist_yf+=' FGC27455 V6946 BY55001' #9.03bug?
 blacklist_rootambi='BY229589 Z2533 DFZ77 M11801 FT227770 Y3946 Y125419 FT227767 Y1578 CTS12490 FT227774 YP1740 Y125394 Y125393 Y125392 Y125391 Y125390' #TODO
 blacklist_rootambi+=' L1095 M11759 S6863 Y125417 Y125369 L1129 Y125404 Y125406 YP1807 Y17293 YP1838 YP1841 YP2250 Y125389' #maybe nean->A00
 blacklist_rootambi+=' FT227759 FT227756 FT227755 Y125410 M5667 PF713 M6176 AF12 M11839' #maybe nean->A0-T
@@ -733,6 +800,16 @@ unreliable_region_b38 = [
     [26637971, 26673210],
     [56887903, 57217415]]
 
+def is_unreliable_b38(loc):
+    for region in unreliable_region_b38:
+        if int(loc) >= region[0] and int(loc) <= region[1]:
+            return True
+    return False
+
+def is_blacklisted_name(name):
+    if name in blacklist:
+        return True
+    return False
 
 def decode_entry(e):
     global haplo_muts_by_name
@@ -741,7 +818,7 @@ def decode_entry(e):
         e2.append(e1.replace('(H)',''))
     m={}
     for e1 in e2:
-        if e1 in blacklist:
+        if is_blacklisted_name(e1):
             return m
     for e1 in e2:
         if e1 in haplo_muts_by_name:
@@ -900,14 +977,13 @@ def yfull_recurse_list(ul_in, level, fileroot):
                     dec['b38']='0'
                     dec['b37']='0'
                     dec['b36']='0'
-                for region in unreliable_region_b38:
-                    if int(dec['b38']) >= region[0] and int(dec['b38']) <= region[1]:
-                        #print('Unreliable snp', m)
-                        dec['isog']='[unreliable snp]'
-                        dec['t']='?'
-                        dec['b38']='0'
-                        dec['b37']='0'
-                        dec['b36']='0'
+                if is_unreliable_b38(dec['b38']):
+                    #print('Unreliable snp', m)
+                    dec['isog']='[unreliable snp]'
+                    dec['t']='?'
+                    dec['b38']='0'
+                    dec['b37']='0'
+                    dec['b36']='0'
                 if not 'b37' in dec or not dec['b37'] or dec['b37'] == 'None':
                     dec['b37'] = '0'
                 if not 'b38' in dec or not dec['b38'] or dec['b38'] == 'None':
@@ -1003,6 +1079,7 @@ def recurse_ftdna_node(level, id):
             muts['raw']=v['variant']
             muts['t']=v['derived']
             muts['isog']=''
+            muts['ftg']=n['name']
             muts['b36']='0' #TODO
             muts['b37']='0' #TODO
             muts['b38']=str(v['position'])
@@ -1030,7 +1107,7 @@ def recurse_ftdna_node(level, id):
     for c in n['children']:
         recurse_ftdna_node(level+1, c);
 
-#wget https://www.familytreedna.com/public/mt-dna-haplotree/get -O ftdnamt.json
+#wget https://www.familytreedna.com/public/y-dna-haplotree/get -O ftdnay.json
 def import_ftdna_tree():
     fname = 'ftdnay.json'
     try:

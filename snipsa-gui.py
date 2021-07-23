@@ -6,12 +6,22 @@ import tkinter.filedialog
 from tkinter import scrolledtext 
 import haplomt
 import haploy
+import haploy_anno_import
 
 bam_support=1
 
 if bam_support:
     import bamload
     import snpload
+
+def handle_ftdna_select():
+    f = tkinter.filedialog.askopenfile()
+    if f:
+        fname = f.name
+    else:
+        return
+    haploy_anno_import.import_single_ft_project(fname)
+
 
 def handle_bam_select():
     f = tkinter.filedialog.askopenfile()
@@ -104,11 +114,17 @@ hdrframe=tk.Frame(window)
 hdrframe.pack(fill='x')
 
 # File
+iframe=tk.Frame(hdrframe)
+iframe.pack(fill='both')
+cbutton4 = tk.Button(iframe, text="Import FTDNA project html", command=handle_ftdna_select)
+cbutton4.pack(side=tk.LEFT, fill='x', expand=True)
+if bam_support:
+    cbutton3 = tk.Button(iframe, text="Import BAM", command=handle_bam_select)
+    cbutton3.pack(side=tk.LEFT, fill='x', expand=True)
+
+# File
 fframe=tk.Frame(hdrframe)
 fframe.pack(fill='both')
-if bam_support:
-    cbutton3 = tk.Button(fframe, text="Import BAM", command=handle_bam_select)
-    cbutton3.pack(side=tk.LEFT)
 button = tk.Button(fframe, text="Choose file", command=handle_file_select)
 button.pack(side=tk.LEFT)
 fnamevar = tk.StringVar()

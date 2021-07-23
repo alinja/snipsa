@@ -30,6 +30,7 @@ parser.add_argument('-b', '--bqual', help='Min base quality')
 parser.add_argument('-q', '--mqual', help='Min map quality')
 parser.add_argument('-m', '--minread', help='Min reads to qualify')
 parser.add_argument('-x', '--maxread', help='Max reads to analyze per location')
+parser.add_argument('-a', '--ancient-ends', help='Discard A/T if within n bases at the ends - try 1-5')
 parser.add_argument('--no-mt', action="store_true", help='Skip MT')
 parser.add_argument('--no-y', action="store_true", help='Skip Y')
 parser.add_argument('--no-ystr', action="store_true", help='Skip Y-STR')
@@ -48,6 +49,8 @@ if args.minread:
     min_reads = int(args.minread)
 if args.maxread:
     read_max = int(args.maxread)
+if args.ancient_ends:
+    bamload.ancient_mode_ends = int(args.ancient_ends)
 if args.no_mt:
     bamload.convert_mt=0
 if args.no_y:

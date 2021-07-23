@@ -12,6 +12,7 @@ haploy.load_snp()
 
 print("Loading SNP DB from YBrowse...")
 haploy.load_ybrowse_snp()
+haploy.save_alldbj()
 
 if do_yfull_snps:
     print("Loading SNP DB from YFull...")

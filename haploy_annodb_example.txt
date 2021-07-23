@@ -10,6 +10,7 @@
   {"m": "Y107833", "txt": "Pirkanmaa"},
   {"m": "Y17922", "txt": "Satakunta"},
   {"m": "BY3474", "txt": "Karjala"},
+  {"m": "CTS4329", "txt": "Varhainen Savo (Häme)"},
   {"m": "Y23712", "txt": "Suomenlahti"},
   {"m": "BY35351", "txt": "Häme"},
   {"m": "CTS108", "txt": "Suomi"},

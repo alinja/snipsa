@@ -49,6 +49,7 @@ min_mapqual=20
 min_reads=1
 read_max=100
 heterozyg_ratio=0.3
+ancient_mode_ends=0
 def col_to_genotype(col):
     stri=''
     c=0
@@ -81,7 +82,18 @@ def col_to_genotype(col):
             else:
                 q = 255
             if q >= min_qual:
-                stri += r.alignment.query_sequence[r.query_position]
+                base=r.alignment.query_sequence[r.query_position]
+                if r.query_position < ancient_mode_ends or (len(r.alignment.query_sequence)-1) - r.query_position < ancient_mode_ends:
+                    if r.query_position < ancient_mode_ends:
+                        dist=r.query_position
+                    else:
+                        dist=(len(r.alignment.query_sequence)-1) - r.query_position
+                    #if (base == 'T' and not r.alignment.is_reverse) or (base == 'A' and r.alignment.is_reverse):
+                    #if (base == 'T' and r.alignment.is_reverse) or (base == 'A' and not r.alignment.is_reverse):
+                    if (base == 'T') or (base == 'A'):
+                        print('Ancient discard: ', r.query_position, len(r.alignment.query_sequence), dist, base, r.alignment.is_reverse)
+                        continue
+                stri += base
     #print(stri)
     na=stri.count('A')
     nc=stri.count('C')
@@ -219,9 +231,9 @@ def load_ystr_db():
             #print(strep)
             str_by_id[id]=strep
 
-#find at least 4 repetitions of 2...30 characters
+#find at least 4 repetitions of 3...30 characters
 #str_re = re.compile(r'(.{2,30}?)\1{3,}')
-str_re = re.compile(r'([ACGT]{2,30}?)\1{6,}')
+str_re = re.compile(r'([ACGT]{3,30}?)\1{6,}')
 def find_ystrs(snpset, samfile):
     global b3x
     global contig
@@ -247,6 +259,10 @@ def find_ystrs(snpset, samfile):
             'b38': b38,
             'gen': '=0' }
         #snp[b3x]=p
+
+        for m in str_re.finditer(seq):
+            num=int(len(m.group(0))/len(m.group(1)))
+            print('M:', p, s, m.span(), num, m.group(1), seq)
 
         m=str_re.search(seq)
         if m:

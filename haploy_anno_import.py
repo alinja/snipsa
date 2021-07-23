@@ -7,13 +7,15 @@ import urllib.request
 import json
 import glob
 import csv
+import argparse
 
 
 #all-ancient-dna-2-07-06.csv (CC-BY indo-european.eu Carlos Quiles, Jean Manco)
+#https://indo-european.eu/ancient-dna/
 #csv: https://drive.google.com/drive/folders/1FNQNLQs93tmsX5_G728zE4DTIS0WUsXR
 #iconv -f windows-1252 -t utf-8 -c all-ancient-dna-2-07-06.csv >all-ancient-dna-2-07-06b.csv
 def import_ancient():
-    fname='all-ancient-dna-2-07-06b.csv'
+    fname='all-ancient-dna-2-07-40b.csv'
     #annos['info']=fname+' (CC-BY indo-european.eu Carlos Quiles, Jean Manco)'
     with open(fname) as f:
         csv_reader=csv.reader(f, delimiter=',')
@@ -216,9 +218,13 @@ def import_yfull_tree(gr):
 
 
 
+def ftdna_check_exists(kit):
+    if kit in anno_by_kit:
+        return True
+    return False
 #
 def import_ftdna_chart(fname, info=''):
-    with open(fname) as f:
+    with open(fname, encoding="UTF-8") as f:
         print('Importing file: ' +fname)
         soup = BeautifulSoup(f.read(), features="html.parser")
         
@@ -241,6 +247,20 @@ def import_ftdna_chart(fname, info=''):
                 gri = i
         for row in rows:
             tds = row.find_all("td")
+            if len(tds)==1:
+                hding = tds[0].get_text().strip()
+                muts = re.findall('>\s*[a-zA-Z]{1,3}[0-9]{1,7}', hding)
+                if muts:
+                    heading_mut = muts[-1][1:]
+                    heading_mut = muts[-1].strip('>').strip()
+                else:
+                    heading_mut = ''
+                muts2 = re.findall('\s*[a-zA-Z]{1,3}[0-9]{1,7}\+', hding)
+                if muts2:
+                    heading_mut2 = muts2[-1].strip('+').strip()
+                else:
+                    heading_mut2 = ''
+                print('HEADING:', hding, muts, heading_mut, muts2, heading_mut2)
             if len(tds)>1:
                 kit=''
                 pat=''
@@ -251,17 +271,32 @@ def import_ftdna_chart(fname, info=''):
                     pat = tds[pati].get_text().strip()
                 if coui >= 0:
                     cou = tds[coui].get_text().strip()
+                grclass = tds[gri].find('span')['class'][0]
                 gr = tds[gri].get_text().strip()
                 if not gr:
                     continue
-                #if 'MIN' in kit or 'MAX' in kit or 'MODE' in kit:
-                #    continue
-                print(kit, pat, gr)
-                anno = {
-                    "g": gr,
-                    "txt": 'FT %s %s %s'%(kit, pat, info)
-                }
+                print(gr, grclass, heading_mut, heading_mut2, kit, pat)
+                anno = {}
+                if grclass == 'haplo1':
+                    if heading_mut:
+                        anno['m'] = heading_mut
+                    elif heading_mut2:
+                        anno['m'] = heading_mut2
+                    else:
+                        anno['g'] = gr
+                else:
+                    anno['g'] = gr
+                anno['txt'] = 'FT %s %s %s'%(kit, pat, info)
+                if ftdna_check_exists(kit):
+                    #TODO: keep best match?
+                    print('EXISTS:', anno)
+                    continue
+                print(anno)
                 annos.append(anno)
+                if 'g' in anno:
+                    anno_by_kit[kit]=anno['g']
+                if 'm' in anno:
+                    anno_by_kit[kit]=anno['m']
 
 def save_anno(fname):
     jroot={
@@ -270,32 +305,76 @@ def save_anno(fname):
     with open(fname, 'w') as f:
         json.dump(jroot, f, indent=1);
 
+def init_annos():
+    global annos
+    global anno_by_kit
+    annos=[]
+    anno_by_kit={}
 
-# Example annotations - it probably doesn't make sense for everyone to import every project
 
-annos=[]
-import_ancient()
-save_anno('haploy_annodb_ancientdna.txt')
+def import_single_ft_project(fname):
+    print(fname)
+    tag = ''
+    tag = fname.split(' - ')[-1]
+    tag = tag.split('.')[0]
+    tag = tag.replace(' ', '')
+    ofname = 'haploy_annodb_' + tag.lower() + '.txt'
+    tag = '[' + tag + ']'
+    print(tag)
 
-annos=[]
-import_yfull_tree('A00')
-import_yfull_tree('A0-T')
-#import_yfull_tree('N-FGC28435')
-#import_yfull_tree('N')
-save_anno('haploy_annodb_yfull.txt')
+    init_annos()
+    import_ftdna_chart(fname, tag)
+    save_anno(ofname)
 
-annos=[]
-#TODO: de-duplicate based on ID?
-#Go to project DNA Results->Classic Chart (e.g. https://www.familytreedna.com/public/Finland?iframe=yresults), set Page Size to a big number, load the new page and Save as
-import_ftdna_chart('ftdna/FamilyTreeDNA - Estonia.htm', '[Estonia]')
-import_ftdna_chart('ftdna/FamilyTreeDNA - Saami Project.htm', '[Saami]')
-import_ftdna_chart('ftdna/FamilyTreeDNA - I1 Suomi Finland & N-CTS8565 -projekti.htm', '[I1 Suomi]')
-import_ftdna_chart('ftdna/FamilyTreeDNA - Finland DNA Project.htm', '[FinlandDNA]')
-import_ftdna_chart('ftdna/FamilyTreeDNA - RussiaDNA Project.htm', '[RussiaDNA]')
-import_ftdna_chart('ftdna/FamilyTreeDNA - R1a1a and Subclades Y-DNA Project.htm', '[R1a1a]')
-import_ftdna_chart('ftdna/FamilyTreeDNA - N1c1 Haplogroup Y-DNA Project.htm', '[N1c1]')
-import_ftdna_chart('ftdna/FamilyTreeDNA - Det skogfinske DNA-prosjektet - Forest Finn DNA project.htm', '[Skogfinske]')
-import_ftdna_chart('ftdna/FamilyTreeDNA - Turun Seudun Sukututkijat Dna.htm', '[Turun Seudun]')
-import_ftdna_chart('ftdna/FamilyTreeDNA - Karjala DNA -projekti.htm', '[Karjala]')
-import_ftdna_chart('ftdna/FamilyTreeDNA - Viitasaari (Savo-Tawastian) DNA project.htm', '[Viitasaari]')
-save_anno('haploy_annodb_ftdnatest.txt')
+def import_example():
+    # Example annotations - it probably doesn't make sense for everyone to import every project
+
+
+    #annos=[]
+    init_annos()
+    import_ancient()
+    save_anno('haploy_annodb_ancientdna.txt')
+
+    #annos=[]
+    init_annos()
+    import_yfull_tree('A00')
+    import_yfull_tree('A0-T')
+    #import_yfull_tree('N-FGC28435')
+    #import_yfull_tree('N')
+    save_anno('haploy_annodb_yfull.txt')
+
+    #annos=[]
+    init_annos()
+    #Go to project DNA Results->Classic Chart (e.g. https://www.familytreedna.com/public/Finland?iframe=yresults), set Page Size to a big number, load the new page and Save as
+    import_ftdna_chart('ftdna/FamilyTreeDNA - Viitasaari (Savo-Tawastian) DNA project.htm', '[Viitasaari]')
+    import_ftdna_chart('ftdna/FamilyTreeDNA - Turun Seudun Sukututkijat Dna.htm', '[Turun Seudun]')
+    import_ftdna_chart('ftdna/FamilyTreeDNA - Det skogfinske DNA-prosjektet - Forest Finn DNA project.htm', '[Skogfinske]')
+    import_ftdna_chart('ftdna/FamilyTreeDNA - Saami Project.htm', '[Saami]')
+    import_ftdna_chart('ftdna/FamilyTreeDNA - Karjala DNA -projekti.htm', '[Karjala]')
+    import_ftdna_chart('ftdna/FamilyTreeDNA - Finland DNA Project.htm', '[FinlandDNA]')
+    import_ftdna_chart('ftdna/FamilyTreeDNA - Sweden DNA PROJECT - Sverigeprojektet.htm', '[SwedenDNA]')
+    import_ftdna_chart('ftdna/FamilyTreeDNA - The Norway DNA Project - Norgesprosjektet.htm', '[NorwayDNA]')
+    import_ftdna_chart('ftdna/FamilyTreeDNA - Estonia.htm', '[Estonia]')
+    import_ftdna_chart('ftdna/FamilyTreeDNA - RussiaDNA Project.htm', '[RussiaDNA]')
+    import_ftdna_chart('ftdna/FamilyTreeDNA - Lituania Propria.htm', '[Lituania]')
+    import_ftdna_chart('ftdna/FamilyTreeDNA - My FamilyTree DNA Latvia Project Website.htm', '[LatviaDNA]')
+    import_ftdna_chart('ftdna/FamilyTreeDNA -.htm', '[BalticSea]')
+    import_ftdna_chart('ftdna/FamilyTreeDNA - I1 Suomi Finland & N-CTS8565 -projekti.htm', '[I1 Suomi]')
+    import_ftdna_chart('ftdna/FamilyTreeDNA - R1a1a and Subclades Y-DNA Project.htm', '[R1a1a]')
+    import_ftdna_chart('ftdna/FamilyTreeDNA - R1b and Subclades Project for R1b (M343+ and M269+) Y DNA Haplogroup.htm', '[R1b]')
+    import_ftdna_chart('ftdna/FamilyTreeDNA - N1c1 Haplogroup Y-DNA Project.htm', '[N1c1]')
+    save_anno('haploy_annodb_ftdnatest.txt')
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    #parser.add_argument('file', nargs='+')
+    #parser.add_argument('file')
+    parser.add_argument('-f', '--file', help='Output build')
+    args = parser.parse_args()
+
+    #if len(args.file) > 0:
+    if args.file:
+        #for fname in args.file:
+        import_single_ft_project(args.file)
+    else:
+        import_example() 

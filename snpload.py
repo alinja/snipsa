@@ -4,6 +4,8 @@ import gzip
 from shutil import copyfile
 import shutil
 
+vcf_verbose = True
+
 #fname: filename
 #crs: chromosomes to read
 def load(fname, crs=[], vcf_sample='', force_build=0):
@@ -18,7 +20,8 @@ def load(fname, crs=[], vcf_sample='', force_build=0):
             #print(idxs)
             if len(idxs) > 0:
                 vcf_idx = idxs[0]
-            print('VCF sample idx:', vcf_idx)
+            if vcf_verbose:
+                print('VCF sample idx:', vcf_idx)
     except:
         print("FORMAT AUTODETECT FAILED!!!!!")
         meta['build'] = 0
@@ -250,7 +253,8 @@ def get_vcf_sample_idx(fname, sname):
                     if re.search(sname, sam):
                         idxs.append(i)
                     samples+=sam+' '
-                print('VCF samples:', samples)
+                if vcf_verbose:
+                    print('VCF samples:', samples)
                 break
             lc+=1
             if lc > 10000:
