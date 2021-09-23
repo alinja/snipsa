@@ -7,7 +7,7 @@ import argparse
 
 #configure how many candidates are shown:
 n_single = 1
-n_multi = 5
+n_multi = 1
 force=''
 filt=''
 all=False
@@ -76,6 +76,7 @@ else:
             print('%s: match found'%fname)
             for bt in best_trees:
                 leaf_mut = bt['ut'][len(bt['ut'])-1]
-                print("Result (%-8s %5.3f%% -%d +%d): %-8s"%(leaf_mut['raw'], bt['score'], bt['neg'], len(bt['extras']), leaf_mut['g']))
+                print("Result (%5.3f%% -%d +%d): %-8s"%(bt['score'], bt['neg'], len(bt['extras']), leaf_mut['g']))
+                haplomt.print_extras(snpset, bt)
         else:
             print('%s: no match'%fname)

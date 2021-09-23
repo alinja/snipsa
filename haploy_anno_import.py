@@ -13,9 +13,9 @@ import argparse
 #all-ancient-dna-2-07-06.csv (CC-BY indo-european.eu Carlos Quiles, Jean Manco)
 #https://indo-european.eu/ancient-dna/
 #csv: https://drive.google.com/drive/folders/1FNQNLQs93tmsX5_G728zE4DTIS0WUsXR
-#iconv -f windows-1252 -t utf-8 -c all-ancient-dna-2-07-06.csv >all-ancient-dna-2-07-06b.csv
+#iconv -f windows-1252 -t utf-8 -c all-ancient-dna-2-07-73.csv >all-ancient-dna-2-07-73b.csv
 def import_ancient():
-    fname='all-ancient-dna-2-07-40b.csv'
+    fname='all-ancient-dna-2-07-73b.csv'
     #annos['info']=fname+' (CC-BY indo-european.eu Carlos Quiles, Jean Manco)'
     with open(fname) as f:
         csv_reader=csv.reader(f, delimiter=',')
@@ -139,6 +139,8 @@ def yfull_is_tree_quirk(group_name, fileroot):
     if group_name=='R-Z2118':
         return True
     if group_name=='R-M335':
+        return True
+    if group_name=='R-U106':
         return True
     if group_name=='K-Y28299':
         return True

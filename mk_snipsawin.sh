@@ -32,7 +32,7 @@ echo .\\Lib >> temp._pth
 echo .\\DLLs >> temp._pth
 echo ..\\snipsa >> temp._pth
 echo import site >> temp._pth
-mv temp._pth $SNIPSAWIN_DIR/$PYTHON_EMBED/python39._pth
+mv temp._pth $SNIPSAWIN_DIR/$PYTHON_EMBED/python38._pth
 
 #snipsa
 echo Installing snipsa ...

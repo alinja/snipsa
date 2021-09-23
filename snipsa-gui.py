@@ -9,6 +9,7 @@ import haploy
 import haploy_anno_import
 
 bam_support=1
+#haploy.use_ftdna_tree = 1
 
 if bam_support:
     import bamload

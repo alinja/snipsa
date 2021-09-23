@@ -48,7 +48,8 @@ min_qual=20
 min_mapqual=20
 min_reads=1
 read_max=100
-heterozyg_ratio=0.3
+reward_qual_threshold=999
+heterozyg_ratio=0.34
 ancient_mode_ends=0
 def col_to_genotype(col):
     stri=''
@@ -58,6 +59,8 @@ def col_to_genotype(col):
         if c > read_max:
             continue
         if r.alignment.mapq < min_mapqual:
+            continue
+        if r.alignment.is_secondary:
             continue
         #print(r.indel)
         if r.is_del:
@@ -94,7 +97,9 @@ def col_to_genotype(col):
                         print('Ancient discard: ', r.query_position, len(r.alignment.query_sequence), dist, base, r.alignment.is_reverse)
                         continue
                 stri += base
-    #print(stri)
+                if q >= reward_qual_threshold:
+                    stri += base #experimental: duplicate to reward high quality bases
+    #print(stri, c)
     na=stri.count('A')
     nc=stri.count('C')
     ng=stri.count('G')
@@ -103,35 +108,33 @@ def col_to_genotype(col):
     nd=stri.count('D')
     tot=na+nc+nt+ng+ni+nd
     if tot==0:
-        print('No read:', col.pos, stri)
+        #print('No read:', col.pos, stri)
         return '--'
     da={'A':na, 'C':nc, 'G':ng, 'T':nt, 'I':ni, 'D':nd}
     das=sorted(da.items(), key = lambda x:(x[1], x[0]), reverse=True)
     first=das[0][1]
     second=das[1][1]
     gt='--'
+    hetness=0
     if tot >= min_reads:
         gt=das[0][0]+das[0][0]
-        hetness = float(second)/first
+        hetness = float(second)/(first+second)
         if hetness > heterozyg_ratio:
             gt=das[0][0]+das[1][0]
-    #print(col.pos, stri, tot, das, hetness, gt)
-    #print(col.pos, tot, das, gt) 
+    #print(col.pos+1, stri, tot, das, hetness, gt)
     return gt
 
 #interface 1based, internals 0based
 def call_range(samfile, contig, pos, num, iter=None):
     ret=['--']*num
-    cols = samfile.pileup(contig=contig, start=pos-1, stop=pos+num-1)
+    cols = samfile.pileup(contig=contig, start=pos-1, stop=pos+num-1, min_base_quality=min_qual, min_mapping_quality=min_mapqual)
     for col in cols:
-        if col.reference_pos >= pos-1 and col.reference_pos < pos+num-1:
+        if col.reference_pos+1 >= pos and col.reference_pos+1 < pos+num:
             if iter and not col.reference_pos+1 in iter:
-                #ret.append('??')
-                #print('??', col.pos)
                 continue
-            #print(iter, col.pos)
+            #print(iter, col.reference_pos+1)
+            #print(col.get_query_sequences(), col.get_query_qualities())
             r=col_to_genotype(col)
-            #ret.append(r)
             ret[col.reference_pos-(pos-1)]=r
     #print(ret)
     return ret
@@ -165,11 +168,6 @@ def pos_triplet_38(p):
 def find_ysnps(snpset, samfile):
     global contig
     global pos_triplet_fn
-    #call_range(samfile, contig, 13423425, 3)
-    #call_range(samfile, contig, 20350749, 3)
-    #call_range(samfile, contig, 19730690, 3)
-    #call_range(samfile, contig, 5053735, 3)
-    #raise
     num_snps=0
     binsize=10000
     binbase=1
@@ -260,9 +258,9 @@ def find_ystrs(snpset, samfile):
             'gen': '=0' }
         #snp[b3x]=p
 
-        for m in str_re.finditer(seq):
-            num=int(len(m.group(0))/len(m.group(1)))
-            print('M:', p, s, m.span(), num, m.group(1), seq)
+        #for m in str_re.finditer(seq):
+        #    num=int(len(m.group(0))/len(m.group(1)))
+        #    print('M:', p, s, m.span(), num, m.group(1), seq)
 
         m=str_re.search(seq)
         if m:
@@ -272,7 +270,8 @@ def find_ystrs(snpset, samfile):
                 continue
             #print(s, m.group(1), num)
             #print(s, m.group(0), num, m.group(1))
-            print(p, s, num, m.group(1), seq)
+            #print(p, s, num, m.group(1), seq)
+            print(s, num, m.group(1), '\t', seq)
         else:
             print(s, seq, '-')
             continue

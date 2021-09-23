@@ -57,7 +57,7 @@ def print_all(snpset, bt, do_print=True):
 def print_data(do_print=True):
     rep=''
 
-    rep += 'Based on data from yfull.com on 2020-05-15 (CC-BY) and phylotree.org\n'
+    rep += 'Based on data from yfull.com on 2021-09-22 (CC-BY) and phylotree.org\n'
 
     if do_print:
         print(rep)
@@ -84,7 +84,7 @@ def report(fname, n, do_uptree=True, do_extra=True, do_all=False, filt='', force
             rep += print_uptree(snpset, bt['ut'], False)
 
         leaf_mut = bt['ut'][len(bt['ut'])-1]
-        rep += "Result (%-8s %5.1f%% -%d +%d): %-8s\n"%(leaf_mut['raw'], bt['score'], bt['neg'], len(bt['extras']), leaf_mut['g'])
+        rep += "Result (%5.1f%% %d -%d +%d): %-8s\n"%(bt['score'], bt['tot'], bt['neg'], len(bt['extras']), leaf_mut['g'])
 
         if do_extra:
             rep += print_extras(snpset, bt, False)
@@ -249,7 +249,7 @@ def mtfind(snpset, nbest=5, filt='', force=''):
         all_mutations = de_duplicate
         
         #calculate score giving penalty from negative matches, favoring longest matches
-        score = 100.0*(pos - 2.0*neg + 0.00*tot - 0.0*nextras)/(tot + nextras)
+        score = 100.0*(pos - 1.0*neg + 0.00*tot - 0.0*nextras)/(tot + nextras)
         
         bt={
             'ut': ut_copy,
@@ -467,3 +467,4 @@ def yfull_recurse_file(group, level):
 def import_yfull_snp():
     #TODO complex muts
     yfull_recurse_file('L', 0)
+    print('Tree database size is %d nodes'%len(haplo_muts_list))

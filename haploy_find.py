@@ -24,6 +24,7 @@ parser.add_argument('-n', '--num', help='Show num best matches')
 parser.add_argument('-q', '--quick', help='Quick mode')
 parser.add_argument('-v', '--vcf-sample', nargs='+', help='VCF sample select (regexp)')
 parser.add_argument('-b', '--build', help='Force build36/37&38 input')
+parser.add_argument('-t', '--ftdna-tree', action='store_true', help='Use ftdna tree')
 parser.add_argument('file', nargs='+')
 
 args = parser.parse_args()
@@ -43,6 +44,8 @@ if args.vcf_sample:
     vcf_sample = args.vcf_sample[0]
 if args.build:
     force_build = int(args.build)
+if args.ftdna_tree:
+    haploy.use_ftdna_tree = 1
 
 if len(args.file) < 2:
     

@@ -1,4 +1,5 @@
 import re
+import os
 import zipfile
 import gzip
 from shutil import copyfile
@@ -11,6 +12,9 @@ vcf_verbose = True
 def load(fname, crs=[], vcf_sample='', force_build=0):
     snpset = {}
     meta = {}
+    meta['build'] = 0
+    meta['format'] = ''
+    meta['total'] = 0
     vcf_idx = 0
     try:
         tmpfile = preprocess_file(fname)
@@ -22,11 +26,11 @@ def load(fname, crs=[], vcf_sample='', force_build=0):
                 vcf_idx = idxs[0]
             if vcf_verbose:
                 print('VCF sample idx:', vcf_idx)
+    except FileNotFoundError:
+        print("File not found!")
+        return (snpset, meta)
     except:
         print("FORMAT AUTODETECT FAILED!!!!!")
-        meta['build'] = 0
-        meta['format'] = ''
-        meta['total'] = 0
         return (snpset, meta)
 
     if force_build:
@@ -86,6 +90,8 @@ def load(fname, crs=[], vcf_sample='', force_build=0):
                     continue
     except UnicodeDecodeError:
         return (snpset, meta)
+    finally:
+        os.remove(tmpfile)
 
     if build != 36 and build != 37 and build != 38:
         print("BUILD NOT SUPPPORTED!!!!! = %d"%build)
@@ -290,6 +296,8 @@ def detect_file_format(fname):
                     if '37' in line:
                         build = 37
                     if '38' in line:
+                        build = 38
+                    if 'rCRS' in line:
                         build = 38
                 continue
             if lc == 1 and line.startswith('RSID'):

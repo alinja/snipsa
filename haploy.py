@@ -58,10 +58,10 @@ def print_extras(snpset, bt, do_print=True, b3x='b37'):
     sbt=sorted(bt['extras'], key=lambda x: int(x[b3x]))
     for e in sbt:
         out.append(e['raw'])
-        outs += e['raw'] + ' '
+        outs += e['raw'] + ':' + e['t'] + ' '
         #outs += '%8s %s %s\n'%(e[b3x], e['t'], e['raw'])
         q=e['raw']
-    rep += 'Extra: '+outs+'\n'
+    rep += 'Extra: %s\n'%(outs)
 
     if do_print:
         print(rep)
@@ -114,7 +114,7 @@ def print_data(do_print=True):
     rep += '* isogg.org/tree Y-DNA Tree %s [CC BY-NC-SA 3.0]\n'%haplo_isogg_info
     rep += '* ybrowse.org %s [CC BY-NC-SA Thomas Krahn]\n'%haplo_ybrowse_info
     rep += '* ftdna.com %s\n'%ftdna_info
-    rep += '* all-ancient-dna-2-07-06.csv [CC-BY indo-european.eu Carlos Quiles, Jean Manco %s]\n'%''
+    rep += '* all-ancient-dna-2-07-73.csv [CC-BY indo-european.eu Carlos Quiles, Jean Manco %s]\n'%''
 
     if do_print:
         print(rep)
@@ -127,6 +127,9 @@ def print_links(gr, do_print=True):
     rep += 'https://www.yfull.com/tree/%s/\n'%(gr)
     rep += 'https://phylogeographer.com/scripts/heatmap.php?newlookup=%s\n'%(gr)
     rep += 'http://scaledinnovation.com/gg/snpTracker.html?snp=%s\n'%(gr)
+    
+    if gr.startswith('N-') or gr.startswith('I-'):
+        rep += 'https://haplotree.info/n/?node=%s\n'%(gr)
 
     if do_print:
         print(rep)
@@ -639,6 +642,7 @@ def convert_build38_mkinput():
     haplo_mut = haplo_muts_by_name
     haplo_mut2 = haplo_yfull_muts_by_name
     haplo_mut3 = haplo_ybrowse_muts_by_name
+    haplo_mut4 = haplo_ftdna_muts_by_name
     with open('crossmap/conv_in.bed', 'w') as f:
         for mut in haplo_mut:
             f.write("chrY %d %d %s\n"%(int(haplo_mut[mut]['b38']), int(haplo_mut[mut]['b38']), haplo_mut[mut]['m']))
@@ -646,6 +650,8 @@ def convert_build38_mkinput():
             f.write("chrY %d %d %s\n"%(int(haplo_mut2[mut]['b38']), int(haplo_mut2[mut]['b38']), haplo_mut2[mut]['m']))
         for mut in haplo_mut3:
             f.write("chrY %d %d %s\n"%(int(haplo_mut3[mut]['b38']), int(haplo_mut3[mut]['b38']), haplo_mut3[mut]['m']))
+        for mut in haplo_mut4:
+            f.write("chrY %d %d %s\n"%(int(haplo_mut4[mut]['b38']), int(haplo_mut4[mut]['b38']), 'none'))
 
 def convert_build38to36():
     convert_build38_mkinput()
@@ -668,6 +674,8 @@ def convert_build38to36():
                 haplo_yfull_muts_by_name[mname]['b36'] = b36
             if mname in haplo_ybrowse_muts_by_name:
                 haplo_ybrowse_muts_by_name[mname]['b36'] = b36
+            if mname in haplo_ftdna_muts_by_name:
+                haplo_ftdna_muts_by_name[mname]['b36'] = b36
             i+=1
     os.system("cd crossmap; rm conv_in.bed conv_out.bed")
 
@@ -692,6 +700,8 @@ def convert_build38to37():
                 haplo_yfull_muts_by_name[mname]['b37'] = b37
             if mname in haplo_ybrowse_muts_by_name:
                 haplo_ybrowse_muts_by_name[mname]['b37'] = b37
+            if mname in haplo_ftdna_muts_by_name:
+                haplo_ftdna_muts_by_name[mname]['b37'] = b37
             i+=1
     os.system("cd crossmap; rm conv_in.bed conv_out.bed")
     
@@ -713,8 +723,13 @@ def load_db():
             haplo_muts_by_b37[mut['b37']] = mut 
             haplo_muts_by_b38[mut['b38']] = mut 
 
+use_ftdna_tree=0
+
 def load_db2j(min_tree_load_level=0):
-    with open('haploy_map2j.txt', 'r') as f:
+    fname='haploy_map2j.txt'
+    if use_ftdna_tree:
+        fname='haploy_map3j.txt'
+    with open(fname, 'r') as f:
         jdata = json.load(f)
         global haplo_ybrowse_info
         global haplo_isogg_info
@@ -745,7 +760,7 @@ def save_db3j():
         'info_yfull': haplo_muts_yfull_info,
         'info_ftdna': ftdna_info,
         'muts': haplo_ftdna_muts_list }
-    with open('haploy_map2j.txt', 'w') as f:
+    with open('haploy_map3j.txt', 'w') as f:
         json.dump(jroot, f, indent=1);
 
 #TODO: results in excessive extras - errors in database or back mutations needing proper handling?
@@ -784,7 +799,8 @@ blacklist_etc='M8990' #str etc
 blacklist_yb='M3745'
 blacklist_yf='Z8834 Z7451 YP1757 YP2129 YP1822 YP1795 YP2228 YP1809 YP2229 YP1948 YP2226 YP1827 L508'
 blacklist_yf+=' Y125394 Y125393 Y125392 Y125391 Y125390 Y125389 Y125396 Y125397 Y125408 [report-spacer] V1896 PAGE65.1 Y2363 PF3515 PF3512 PF3507 PF3596 Z6023 M547 A3073 Z1716 PF5827 PF1534 PF6011 PF2634 PF2635'
-blacklist_yf+=' FGC27455 V6946 BY55001' #9.03bug?
+blacklist_yf+=' V6081 FGC27455 V6946 BY55001' #Not defining for A0-T
+blacklist_yf+=' Z798' #Not same as M1076/V1836
 blacklist_rootambi='BY229589 Z2533 DFZ77 M11801 FT227770 Y3946 Y125419 FT227767 Y1578 CTS12490 FT227774 YP1740 Y125394 Y125393 Y125392 Y125391 Y125390' #TODO
 blacklist_rootambi+=' L1095 M11759 S6863 Y125417 Y125369 L1129 Y125404 Y125406 YP1807 Y17293 YP1838 YP1841 YP2250 Y125389' #maybe nean->A00
 blacklist_rootambi+=' FT227759 FT227756 FT227755 Y125410 M5667 PF713 M6176 AF12 M11839' #maybe nean->A0-T
@@ -796,7 +812,7 @@ blacklist=blacklist.split()
 unreliable_region_b38 = [
     [1       , 2781479 ],
     [10072350, 11686750],
-    [20054914, 20351054],
+    [20054914, 20296729], [20296731, 20351054],
     [26637971, 26673210],
     [56887903, 57217415]]
 
@@ -933,6 +949,8 @@ def yfull_is_tree_quirk(group_name, fileroot):
     if group_name=='R-Z2118':
         return True
     if group_name=='R-M335':
+        return True
+    if group_name=='R-U106':
         return True
     if group_name=='K-Y28299':
         return True

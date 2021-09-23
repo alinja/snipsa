@@ -4,11 +4,13 @@ A small project experimenting with SNP genome data and python.
 
 ## snipsa-gui.py
 
-Windows: unzip the windows release package and start snipsa.bat in the main folder. The zip includes python, all dependencies and SNP databases.
+Windows: unzip the windows release package and start snipsa.bat in the main folder. The zip includes python, all dependencies and SNP databases. Thanks to TPN for the preinstalled python package.
 
 Linux: install dependencies and run snipsa-gui.py.
 
-Experimental bam alignment file support can be enabled by editing the line bam_support=0, but pysam library has no windows support.
+Experimental bam alignment file support is now enabled by default. 
+
+FTDNA project files can be imported. Go to project DNA Results->Classic Chart, set Page Size to a big number, load the new page and Save as.
 
 ## haploy_find.py
 
@@ -32,7 +34,7 @@ The tool accepts also multiple files. This can be used to search haplogroups amo
 This script imports the ISOGG database to the internal format that is used by haploy_find.py. It needs
 CrossMap (`pip3 install CrossMap`), conversion chain file (`crossmap/GRCh38_to_NCBI36.chain.gz`) and
 the ISOGG spreadsheet in csv format (`'SNP Index - Human.csv'`). Outputs a `haploy_map.txt`
-file which is used by haploy_find.py. See haploy.py for details.
+file which is used by haploy_find.py. See haploy.py for details on other required input files.
 
 ## haploy_anno_import.py
 
