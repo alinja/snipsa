@@ -4,6 +4,7 @@ import zipfile
 import gzip
 from shutil import copyfile
 import shutil
+import uuid
 
 vcf_verbose = True
 
@@ -336,7 +337,7 @@ def is_gz_file(fname):
 
 def preprocess_file(fname):
     #TODO make real temp file
-    tmpfile = 'genome_data.tmp'
+    tmpfile = str(uuid.uuid4())
     if zipfile.is_zipfile(fname):
         with zipfile.ZipFile(fname) as z:
             zfname = z.namelist()[0]
