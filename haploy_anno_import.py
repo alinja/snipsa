@@ -238,6 +238,8 @@ def import_ftdna_chart(fname, info=''):
         gri = -1
         row = rows[0]
         ths = row.find_all("th")
+        heading_mut = ''
+        heading_mut2 = ''
         for i, th in enumerate(ths):
             if 'Kit' in th.get_text():
                 kiti = i

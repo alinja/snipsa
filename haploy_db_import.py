@@ -16,7 +16,7 @@ haploy.save_alldbj()
 
 if do_yfull_snps:
     print("Loading SNP DB from YFull...")
-    haploy.load_yfull_snp(234)
+    haploy.load_yfull_snp(370)
 
 if include_ftdna_tree:
     print("Loading SNP DB from FTDNA...")

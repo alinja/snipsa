@@ -57,7 +57,7 @@ def print_all(snpset, bt, do_print=True):
 def print_data(do_print=True):
     rep=''
 
-    rep += 'Based on data from yfull.com on 2022-01-14 (CC-BY) and phylotree.org\n'
+    rep += 'Based on data from yfull.com on 2022-12-04 (CC-BY) and phylotree.org\n'
 
     if do_print:
         print(rep)
