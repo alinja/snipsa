@@ -3,7 +3,7 @@ import sys
 import os
 import haploy
 
-do_yfull_snps=0
+do_yfull_snps=1
 include_ftdna_tree=1
 #use_ftdna_tree=1
 
@@ -16,7 +16,7 @@ haploy.save_alldbj()
 
 if do_yfull_snps:
     print("Loading SNP DB from YFull...")
-    haploy.load_yfull_snp(370)
+    haploy.load_yfull_snp(459)
 
 if include_ftdna_tree:
     print("Loading SNP DB from FTDNA...")

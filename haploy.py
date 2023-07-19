@@ -619,6 +619,8 @@ def load_ybrowse_snp():
             #TODO quality based filtering
             b38 = tlv[3]
             f=tlv[8].split(';')
+            if len(f) < 4:
+                continue
             mname=f[0].split('=')[1]
             der=f[3].split('=')[1]
             der=der[0].upper()
@@ -648,7 +650,10 @@ def convert_build38_mkinput():
         for mut in haplo_mut:
             f.write("chrY %d %d %s\n"%(int(haplo_mut[mut]['b38']), int(haplo_mut[mut]['b38']), haplo_mut[mut]['m']))
         for mut in haplo_mut2:
-            f.write("chrY %d %d %s\n"%(int(haplo_mut2[mut]['b38']), int(haplo_mut2[mut]['b38']), haplo_mut2[mut]['m']))
+            try:
+                f.write("chrY %d %d %s\n"%(int(haplo_mut2[mut]['b38']), int(haplo_mut2[mut]['b38']), haplo_mut2[mut]['m']))
+            except:
+                pass
         for mut in haplo_mut3:
             f.write("chrY %d %d %s\n"%(int(haplo_mut3[mut]['b38']), int(haplo_mut3[mut]['b38']), haplo_mut3[mut]['m']))
         for mut in haplo_mut4:
