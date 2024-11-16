@@ -829,8 +829,15 @@ unreliable_region_b38 = [
     [56887903, 57217415]]
 
 def is_unreliable_b38(loc):
+    if loc is None:
+        return False
+    try:
+        loc = int(loc)
+    except ValueError:
+        return False
+
     for region in unreliable_region_b38:
-        if int(loc) >= region[0] and int(loc) <= region[1]:
+        if loc >= region[0] and loc <= region[1]:
             return True
     return False
 
